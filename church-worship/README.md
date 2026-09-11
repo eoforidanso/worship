@@ -67,14 +67,44 @@ has no relay (a `ws://` relay can't be reached from an `https://` page), so it
 runs windows-on-one-machine and reads "Local only". For an actual service, run
 it locally.
 
-Two things to know:
+### Media offline
+
+Media files — images and video, at any size — are stored as Blobs in
+IndexedDB, so a background survives a reload and projects with no network.
+There is no size limit: IndexedDB's quota is a share of free disk (hundreds of
+GB on a typical laptop), so a full-length video background simply fits.
+
+Backgrounds reference media by **id**, never by URL. Object URLs are minted
+fresh each session and are meaningless after a reload, so a URL-keyed
+background would be dangling by Sunday.
+
+The media library shows what is actually available:
+
+| Dot | Meaning |
+| --- | --- |
+| green | Saved offline — will project with the network down |
+| grey | Added by URL — needs the network |
+| red | Referenced by the plan, but the bytes aren't on this machine |
+
+A red dot also appears on the service plan item, so you find out on Thursday
+rather than mid-service. If a background is missing the slide still draws, on
+the theme colour, with the words intact — a missing file never costs the
+congregation the lyrics.
+
+The app asks for persistent storage so the browser won't quietly evict the
+library between prep and Sunday. Browsers may grant or refuse that silently.
+
+Three things to know:
 
 - **Updates wait to be asked for.** A new build shows a banner in the operator
   window; nothing reloads until you click it. An unannounced reload mid-song
   would be worse than running last week's build.
-- **The plan is in `localStorage`**, which is per-browser and per-machine. The
-  projector laptop caches the *app* offline, not your service — carry the plan
+- **The plan is in `localStorage`** and the media in IndexedDB — both are
+  per-browser and per-machine. Nothing syncs between laptops; carry the service
   on the machine that will run it.
+- **Media added by URL is the one thing not guaranteed offline.** It's fetched
+  over the network and shows a grey dot. Drop the file in instead to make it
+  green.
 
 ## Keyboard
 
@@ -117,14 +147,14 @@ re-project a slide on its own.
 
 ## Limits
 
-- **Video backgrounds** are modelled in the renderer (`bg.kind === 'video'`) but
-  the output surface doesn't yet mount a `<video>` element to feed it — images
-  and colours work today.
-- **Media over 2MB** is kept as an object URL for the session only; smaller files
-  are inlined as data URIs so they survive a reload. A real deployment wants a
-  file server or the File System Access API instead of localStorage.
 - **No scripture lookup.** Scripture items are typed or pasted; wiring in an API
   or a local Bible database is the obvious next step.
+- **Nothing syncs between machines.** The plan and the media live in the
+  browser that created them. Moving a service to another laptop means
+  re-importing it there.
+- **Video has no audio path.** Video backgrounds are drawn to the canvas muted
+  (autoplay requires it, and slides carry no sound). Audio tracks as a media
+  type aren't implemented.
 - **The relay is unauthenticated.** It's fine on a closed church LAN and not fine
   anywhere else.
 
@@ -138,5 +168,12 @@ Offline has been tested the honest way: build, load once, stop the server
 entirely (connection refused on the port), reload. `/live`, `/stage` and
 `/output` all come back from cache.
 
-Not yet exercised: the WebSocket relay across two machines, the media browser
-with real files, and the theme editor.
+Media offline was tested with real files: a 20MB image and a recorded video
+imported, set as backgrounds, and still projecting after a reload; the video
+verified as actually moving (sampled canvas pixels change over time) on both
+the operator preview and the Output window. Deleting the stored bytes while
+leaving the plan intact was tested too — the slide falls back to the theme
+colour with the words intact and the item shows a red dot.
+
+Not yet exercised: the WebSocket relay across two machines, and the theme
+editor.

@@ -4,6 +4,7 @@ import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-
 import { CSS } from '@dnd-kit/utilities'
 import { useContent } from '../store/useContent'
 import { useLive } from '../store/useLive'
+import { urlFor } from '../lib/mediaStore'
 
 const TYPE_META = {
   song: { icon: '♪', label: 'Song' },
@@ -100,7 +101,10 @@ function PlanRow({ item, live, onGoLive, onEdit }) {
           {meta.icon}
         </span>
         <span className="plan-text">
-          <span className="plan-title-text">{item.title}</span>
+          <span className="plan-title-text">
+            {item.title}
+            <ItemOfflineDot item={item} />
+          </span>
           <span className="muted small">
             {item.subtitle ? `${item.subtitle} · ` : ''}
             {item.slides.length} slide{item.slides.length === 1 ? '' : 's'}
@@ -121,4 +125,25 @@ function PlanRow({ item, live, onGoLive, onEdit }) {
       </span>
     </li>
   )
+}
+
+/**
+ * Whether this item will actually project with no network.
+ *
+ * Only shown when there's something to say — an item with a plain colour
+ * background is unconditionally fine and doesn't need a badge arguing
+ * otherwise. Green is deliberately silent for the common case.
+ */
+function ItemOfflineDot({ item }) {
+  const bg = item.background
+  if (!bg || bg.kind === 'color') return null
+
+  const resolved = bg.mediaId ? urlFor(bg.mediaId) : bg.value
+  if (resolved && !bg.mediaId && /^https?:/i.test(bg.value ?? '')) {
+    return <span className="dot dot-remote" title="Background is online only — needs the network" />
+  }
+  if (!resolved) {
+    return <span className="dot dot-missing" title="Background unavailable offline" />
+  }
+  return null
 }

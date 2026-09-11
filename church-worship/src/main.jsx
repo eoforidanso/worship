@@ -9,6 +9,7 @@ import ThemeEditor from './routes/ThemeEditor'
 import Output from './routes/Output'
 import Stage from './routes/Stage'
 import './lib/pwa'
+import { mediaReady } from './lib/hydrateMedia'
 import './styles.css'
 
 const router = createBrowserRouter([
@@ -31,8 +32,12 @@ const router = createBrowserRouter([
   basename: import.meta.env.BASE_URL.replace(/\/$/, ''),
 })
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <RouterProvider router={router} />
-  </React.StrictMode>,
-)
+// Attach stored media before the first paint, so the projector never shows a
+// slide with its background missing and then flashes it in a moment later.
+mediaReady.finally(() => {
+  ReactDOM.createRoot(document.getElementById('root')).render(
+    <React.StrictMode>
+      <RouterProvider router={router} />
+    </React.StrictMode>,
+  )
+})

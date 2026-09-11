@@ -90,6 +90,7 @@ export const useContent = create(
       themes: [DEFAULT_THEME, SCRIPTURE_THEME],
       media: [],
       logoUrl: null,
+      logoId: null,
 
       // --- plan -----------------------------------------------------------
       setPlanTitle: (title) => set((s) => ({ plan: { ...s.plan, title } })),
@@ -247,7 +248,21 @@ export const useContent = create(
         set((s) => ({ media: s.media.map((m) => (m.id === id ? { ...m, ...patch } : m)) })),
       removeMedia: (id) => set((s) => ({ media: s.media.filter((m) => m.id !== id) })),
 
-      setLogo: (url) => set({ logoUrl: url }),
+      /**
+       * Re-attach this session's object URLs after a reload, and mark anything
+       * whose bytes are gone so the UI can say so instead of drawing nothing.
+       */
+      attachMediaUrls: (resolve, stored) =>
+        set((s) => ({
+          media: s.media.map((m) => ({
+            ...m,
+            url: resolve(m.id) ?? undefined,
+            offline: stored ? stored.has(m.id) : m.offline,
+          })),
+          logoUrl: s.logoId ? (resolve(s.logoId) ?? s.logoUrl) : s.logoUrl,
+        })),
+
+      setLogo: (url, id = null) => set({ logoUrl: url, logoId: id }),
 
       // --- selectors -------------------------------------------------------
       getItem: (id) => get().plan.items.find((it) => it.id === id) ?? null,
@@ -255,13 +270,15 @@ export const useContent = create(
     }),
     {
       name: 'worship-content-v1',
-      // Media blobs can be large; keep object URLs out of storage by only
-      // persisting entries backed by a durable URL or data URI.
+      // Only metadata lives here. The bytes are Blobs in IndexedDB (see
+      // lib/mediaStore.js) and `url` is a per-session object URL, so persisting
+      // it would just store a dead reference.
       partialize: (s) => ({
         plan: s.plan,
         themes: s.themes,
-        logoUrl: s.logoUrl,
-        media: s.media.filter((m) => !m.url?.startsWith('blob:')),
+        logoId: s.logoId,
+        logoUrl: s.logoUrl?.startsWith('blob:') ? null : s.logoUrl,
+        media: s.media.map(({ url, ...rest }) => rest),
       }),
     },
   ),

@@ -9,6 +9,8 @@
  * target canvas, so a 240px thumbnail and a 4K projector agree on layout.
  */
 
+import { urlFor } from './mediaStore'
+
 export const DESIGN_W = 1920
 export const DESIGN_H = 1080
 
@@ -31,6 +33,42 @@ export function getImage(url, onReady) {
   img.onerror = () => imageCache.delete(url)
   img.src = url
   imageCache.set(url, img)
+  return null
+}
+
+// --- video cache -----------------------------------------------------------
+
+const videoCache = new Map()
+
+/**
+ * Video backgrounds, on the same terms as images: the renderer owns the
+ * element, so every surface gets them through one path and no caller has to
+ * mount a `<video>` of its own.
+ *
+ * Returns a playing element once there's a frame to draw, otherwise null.
+ * Surfaces that animate (output, live preview) get motion; static ones
+ * (thumbnails) draw whatever frame has landed, which is the right still.
+ */
+export function getVideo(url, onReady) {
+  if (!url) return null
+  const hit = videoCache.get(url)
+  if (hit) return hit.readyState >= 2 ? hit : null
+
+  const v = document.createElement('video')
+  v.crossOrigin = 'anonymous'
+  v.muted = true // autoplay is only allowed muted, and slides carry no sound
+  v.loop = true
+  v.playsInline = true
+  v.preload = 'auto'
+  v.onloadeddata = () => {
+    v.play().catch(() => {
+      /* autoplay blocked until a gesture — the poster frame still draws */
+    })
+    onReady?.()
+  }
+  v.onerror = () => videoCache.delete(url)
+  v.src = url
+  videoCache.set(url, v)
   return null
 }
 
@@ -94,16 +132,35 @@ function drawBackground(ctx, bg, w, h, onReady) {
     return
   }
 
+  // Media is addressed by id and resolved to this session's object URL.
+  // `bg.value` is the fallback for remote URLs and for plans saved before
+  // media moved into IndexedDB — but a `blob:` value is always a dead
+  // reference from an earlier session, so it counts as absent rather than
+  // sending us down the image path to draw nothing.
+  const stored = bg.mediaId ? urlFor(bg.mediaId) : null
+  const legacy = bg.value?.startsWith('blob:') ? null : bg.value
+  const src = stored ?? legacy ?? null
+
+  // No bytes for this background — fall back to the flat colour rather than
+  // projecting a black rectangle where a photo should be. The text still draws
+  // on top, so a missing file never costs the congregation the words.
+  if (!src) {
+    ctx.fillStyle = bg.fallback ?? '#0b1020'
+    ctx.fillRect(0, 0, w, h)
+    return
+  }
+
   ctx.fillStyle = '#000000'
   ctx.fillRect(0, 0, w, h)
 
   if (bg.kind === 'image') {
-    const img = getImage(bg.value, onReady)
+    const img = getImage(src, onReady)
     if (img) drawCover(ctx, img, w, h)
-  } else if (bg.kind === 'video' && bg.element) {
-    // Live <video> element supplied by the output surface.
-    const v = bg.element
-    if (v.readyState >= 2) {
+  } else if (bg.kind === 'video') {
+    // `bg.element` lets a caller supply its own element; otherwise the
+    // renderer owns one, so every surface draws video through this path.
+    const v = bg.element ?? getVideo(src, onReady)
+    if (v && v.readyState >= 2 && v.videoWidth) {
       const scale = Math.max(w / v.videoWidth, h / v.videoHeight)
       const dw = v.videoWidth * scale
       const dh = v.videoHeight * scale

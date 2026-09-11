@@ -168,21 +168,34 @@ export default function SlideComposer() {
         </div>
 
         <div className="bg-grid">
-          {media
-            .filter((m) => m.type === 'image')
-            .slice(0, 12)
-            .map((m) => (
-              <button
-                key={m.id}
-                className="bg-chip"
-                title={m.name}
-                onClick={() => updateItem(item.id, { background: { kind: 'image', value: m.url, dim: 0.35 } })}
-              >
-                <img src={m.url} alt="" />
-              </button>
-            ))}
+          {media.slice(0, 12).map((m) => (
+            <button
+              key={m.id}
+              className="bg-chip"
+              title={m.name}
+              onClick={() =>
+                // mediaId, not the URL: object URLs are per-session, so a
+                // URL-keyed background would be dead on the next reload.
+                // `value` is kept only for remote media, where the URL is the
+                // durable reference — storing a blob: URL would persist a
+                // pointer that's guaranteed to be dangling by then.
+                updateItem(item.id, {
+                  background: {
+                    kind: m.type,
+                    mediaId: m.id,
+                    ...(m.url?.startsWith('blob:') ? {} : { value: m.url }),
+                    dim: 0.35,
+                  },
+                })
+              }
+            >
+              {m.type === 'video' ? <video src={m.url} muted /> : <img src={m.url} alt="" />}
+            </button>
+          ))}
         </div>
-        {media.length === 0 && <p className="muted small">Add images in the Media tab to use as backgrounds.</p>}
+        {media.length === 0 && (
+          <p className="muted small">Add images or video in the Media tab to use as backgrounds.</p>
+        )}
 
         <label className="field">
           <span>Notes (stage display only)</span>
