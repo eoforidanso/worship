@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--prefix", "church-worship"],
+      "port": 5173
+    },
+    {
+      "name": "preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview", "--prefix", "church-worship", "--", "--port", "4173"],
+      "port": 4173
+    },
+    {
+      "name": "preview-pages",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview:pages", "--prefix", "church-worship", "--", "--port", "4174"],
+      "port": 4174
+    }
+  ]
+}
