@@ -52,6 +52,21 @@ even with the server stopped — verified by killing the server and reloading
 `/live`, `/stage` and `/output`. In Chrome, *Install* puts it in the dock as a
 standalone window.
 
+### Hosted copy
+
+There's a deployed copy at <https://eoforidanso.github.io/worship/>, built from
+the same source with the base path set for the subpath Pages serves from:
+
+```bash
+npm run build:pages     # BASE_PATH=/worship/, plus 404.html and .nojekyll
+npm run preview:pages   # check it locally at /worship/ before deploying
+```
+
+The `gh-pages` branch holds that build. The hosted copy is the app only — it
+has no relay (a `ws://` relay can't be reached from an `https://` page), so it
+runs windows-on-one-machine and reads "Local only". For an actual service, run
+it locally.
+
 Two things to know:
 
 - **Updates wait to be asked for.** A new build shows a banner in the operator
