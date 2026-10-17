@@ -20,7 +20,10 @@ const VERSION = 1
 /** Media ids a set of items and the logo depend on. */
 function referencedMedia(items, logoId) {
   const ids = new Set()
-  for (const it of items) if (it.background?.mediaId) ids.add(it.background.mediaId)
+  for (const it of items) {
+    if (it.background?.mediaId) ids.add(it.background.mediaId)
+    for (const sl of it.slides ?? []) if (sl.background?.mediaId) ids.add(sl.background.mediaId) // imported pictures, PDF pages
+  }
   if (logoId) ids.add(logoId)
   return ids
 }
@@ -39,6 +42,7 @@ export async function exportBundle(scope = 'service') {
   const themes = scope === 'all' ? s.themes : s.themes.filter((t) => themeIds.has(t.id))
 
   const mediaIds = scope === 'all' ? new Set(s.media.map((m) => m.id)) : referencedMedia(items, s.logoId)
+  for (const an of s.announcements ?? []) if (an.mediaId) mediaIds.add(an.mediaId) // notice posters travel too
   const media = s.media.filter((m) => mediaIds.has(m.id)).map(({ url, ...rest }) => rest)
 
   const blobs = {}
@@ -58,6 +62,7 @@ export async function exportBundle(scope = 'service') {
     media,
     logoId: s.logoId,
     prayers: s.prayers, // the parish's own Order of Mass texts travel with every file
+    announcements: s.announcements,
     blobs,
   }
 

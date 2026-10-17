@@ -19,7 +19,10 @@ export default function Stage() {
   const slide = item?.slides[slideIndex] ?? null
 
   const next = useMemo(() => {
-    if (!item) return null
+    if (!item) {
+      const first = plan.items[0]
+      return first ? { ...first.slides[0], label: `Mass begins with ${first.title}` } : null
+    }
     if (slideIndex + 1 < item.slides.length) return item.slides[slideIndex + 1]
     const i = plan.items.findIndex((it) => it.id === item.id)
     const nextItem = plan.items[i + 1]
@@ -53,12 +56,14 @@ export default function Stage() {
 
       <div className="stage-current">
         {slide?.label && <span className="stage-label">{slide.label}</span>}
-        <p style={{ fontSize: stageSize(slide?.body) }}>{slide?.body || '—'}</p>
+        <p style={{ fontSize: stageSize(slide?.body) }}>
+          {slide?.body || (slide?.background ? '(picture)' : '—')}
+        </p>
       </div>
 
       <div className="stage-next">
         <span className="stage-label">Next{next?.label ? ` · ${next.label}` : ''}</span>
-        <p>{next?.body || 'End of plan'}</p>
+        <p>{next ? next.body || '…' : 'End of plan'}</p>
       </div>
 
       {(message || item?.notes) && (

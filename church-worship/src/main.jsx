@@ -9,6 +9,7 @@ import ThemeEditor from './routes/ThemeEditor'
 import Library from './routes/Library'
 import Readings from './routes/Readings'
 import Prayers from './routes/Prayers'
+import Announcements from './routes/Announcements'
 import Output from './routes/Output'
 import Stage from './routes/Stage'
 import './lib/pwa'
@@ -37,6 +38,7 @@ const router = createBrowserRouter(
         { path: 'library', element: <Library /> },
         { path: 'readings', element: <Readings /> },
         { path: 'prayers', element: <Prayers /> },
+      { path: 'announcements', element: <Announcements /> },
       ],
     },
     // Standalone windows — no operator chrome.

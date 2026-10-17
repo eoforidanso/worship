@@ -203,9 +203,24 @@ function Songs() {
     )
   }, [songs, q])
 
+  // Say where the song went: the plan is in the rail, and a silent add looks like no add.
+  const [added, setAdded] = useState(null) // { libId, message }
+  const addedTimer = useRef(null)
   const add = (id) => {
     const itemId = addFromLibrary(id, cuedId)
-    if (itemId) cue(itemId)
+    if (!itemId) return
+    cue(itemId)
+    const items = useContent.getState().plan.items
+    const i = items.findIndex((it) => it.id === itemId)
+    const it = items[i]
+    const message = it.lectionary?.slot
+      ? `Added as the ${it.subtitle}.`
+      : i > 0
+        ? `Added after “${items[i - 1].title}”.`
+        : 'Added at the start of the service.'
+    setAdded({ libId: id, message })
+    clearTimeout(addedTimer.current)
+    addedTimer.current = setTimeout(() => setAdded(null), 4000)
   }
 
   return (
@@ -245,8 +260,12 @@ function Songs() {
               )}
             </button>
             <span className="svc-actions">
-              <button className="btn btn-sm" onClick={() => add(x.id)}>
-                + Add to service
+              <button
+                className={`btn btn-sm${added?.libId === x.id ? ' btn-primary' : ''}`}
+                onClick={() => add(x.id)}
+                title={cuedId ? 'Goes after the selected item in the plan' : 'Goes at the end of the plan'}
+              >
+                {added?.libId === x.id ? '✓ Added' : '+ Add to service'}
               </button>
               <button
                 className="icon-btn danger"
@@ -261,13 +280,17 @@ function Songs() {
           </li>
         ))}
       </ul>
+      {added && (
+        <p className="added-note small">
+          {added.message} Select an item in the plan first to choose where songs go.
+        </p>
+      )}
       {songs.length === 0 && (
         <p className="empty">
           Nothing saved yet. Press ☆ on any item in the service plan to keep it here for next time.
         </p>
       )}
       {songs.length > 0 && shown.length === 0 && <p className="empty">No match.</p>}
-
     </section>
   )
 }

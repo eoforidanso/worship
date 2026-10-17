@@ -25,11 +25,21 @@ const imageCache = new Map()
 export function getImage(url, onReady) {
   if (!url) return null
   const hit = imageCache.get(url)
-  if (hit) return hit.complete && hit.naturalWidth ? hit : null
+  if (hit) {
+    if (hit.complete && hit.naturalWidth) return hit
+    // Still loading: every surface waiting on it gets told, not just the first
+    // to ask — otherwise thumbnails stay black while the preview fills in.
+    if (onReady) hit.waiting.add(onReady)
+    return null
+  }
 
   const img = new Image()
   img.crossOrigin = 'anonymous'
-  img.onload = () => onReady?.()
+  img.waiting = new Set(onReady ? [onReady] : [])
+  img.onload = () => {
+    for (const fn of img.waiting) fn()
+    img.waiting.clear()
+  }
   img.onerror = () => imageCache.delete(url)
   img.src = url
   imageCache.set(url, img)
@@ -117,6 +127,14 @@ function fitText(ctx, text, theme, boxW, boxH, scale) {
 
 // --- background ------------------------------------------------------------
 
+/** Draw an image whole (object-fit: contain) — a poster or a PDF page keeps its edges. */
+function drawContain(ctx, img, w, h) {
+  const scale = Math.min(w / img.naturalWidth, h / img.naturalHeight)
+  const dw = img.naturalWidth * scale
+  const dh = img.naturalHeight * scale
+  ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh)
+}
+
 /** Draw an image cropped to fill (object-fit: cover), never distorted. */
 function drawCover(ctx, img, w, h) {
   const scale = Math.max(w / img.naturalWidth, h / img.naturalHeight)
@@ -155,7 +173,7 @@ function drawBackground(ctx, bg, w, h, onReady) {
 
   if (bg.kind === 'image') {
     const img = getImage(src, onReady)
-    if (img) drawCover(ctx, img, w, h)
+    if (img) (bg.fit === 'contain' ? drawContain : drawCover)(ctx, img, w, h)
   } else if (bg.kind === 'video') {
     // `bg.element` lets a caller supply its own element; otherwise the
     // renderer owns one, so every surface draws video through this path.
@@ -218,7 +236,9 @@ export function renderSlide(ctx, opts) {
     return
   }
 
-  drawBackground(ctx, background ?? theme.background, w, h, onReady)
+  // A slide can carry its own picture (imported photos, PDF pages); otherwise
+  // the item's background, otherwise the theme's.
+  drawBackground(ctx, slide?.background ?? background ?? theme.background, w, h, onReady)
 
   if (showLogo) {
     const img = getImage(logoUrl, onReady)

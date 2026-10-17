@@ -31,7 +31,8 @@ npm run server
 | **Service Planner** | left rail, always visible | Drag-and-drop the running order. Click an item to **cue** it (nothing changes on screen), double-click to edit. ☆ saves it to the library. |
 | **Readings** | `/readings` | The Lectionary for Mass by date: the celebration, Year A/B/C and I/II, the Mass options, and every reading — added to the service in one click. |
 | **Prayers** | `/prayers` | The people's parts of the Order of Mass — traditional English, Latin, or your missal's wording pasted once. |
-| **Services & Songs** | `/library` | Every saved service, newest first — open one, or start next week's as a copy. The song library, searchable by title, author or lyric. Export / import / back up. |
+| **Announcements** | `/announcements` | Parish notices kept week to week, each with an optional end date; added to the Mass after Communion or as a loop before Mass. |
+| **Services** | `/library` | Every saved service, newest first — open one, or start next week's as a copy. The song library, searchable by title, author or lyric. Export / import / back up. |
 | **Slide Composer** | `/compose/:itemId` | Edit slide text, labels, theme and background. Paste a whole song and have it split into slides. |
 | **Media Browser** | `/media` | Grid of images and video with tags and search. Drop files onto it. Star an image to make it the logo. |
 | **Live Controller** | `/live` | Live and next preview, the cued item's slide grid, transport, blackout / clear / logo, countdown, stage messages. |
@@ -42,7 +43,8 @@ button in the top bar, drag it to the projector, double-click for fullscreen.
 
 ## Mass readings
 
-Open **Readings** (or press *✠ Readings of the day* under the plan). It opens
+Open **Readings** (or, on an empty service, press *✠ Add this day's Mass* in
+the plan). It opens
 on the service's date; the top bar shows the same day — "29th Sunday of
 Ordinary Time · Year A" — next to the date.
 
@@ -132,13 +134,45 @@ service, so Mass runs with the network off.
 
 ## Running a service
 
+**Made for a laptop at the back of church.** The Stage and Output buttons
+are always in the top bar (the tabs wrap to a second row on a small
+screen). Previous, Next and Blackout stay on screen without scrolling. The
+plan shows each part on one line under the headings of the Mass —
+Introductory Rites, Liturgy of the Word, … — and scrolls itself to keep the
+live part in view. Before Mass starts, *Next* and the stage display show
+what the first press will put up. A new service is named after its
+liturgical day ("29th Sunday of Ordinary Time") until you type a name.
+*Clear* empties the plan.
+
+**Announcements.** Keep the parish notices in the *Announcements* tab — a
+title and a few lines each, or a poster as a picture (choose a file or paste
+one). Give a notice an *Until* date and it stops showing after that day; untick
+*Show* to hold one back. *Add to service* puts one slide per notice either
+**after Communion** (just before the Blessing and Dismissal, where notices are
+given) or **before Mass, on a loop** that changes every few seconds. Adding
+again replaces the notices already in the service. Notices are saved, and
+travel in *Back up everything* files with their pictures.
+
+**Paste or add files.** *⊕ Paste or file* under the plan (or drop files
+anywhere on the plan) brings in outside content, after the selected item:
+
+| What | Becomes |
+| --- | --- |
+| Pasted text, `.txt` | Slides — a blank line starts a new one, `[Verse 1]` labels one |
+| A picture (pasted from the clipboard, or a file) | One slide each, shown whole, never cropped |
+| A PDF | One slide per page, each page as a picture, so its layout is kept |
+| Word, PowerPoint | Not read directly — save as PDF first |
+
+Pictures and PDF pages go into the offline media library, so they project
+with the network off and travel inside exported service files.
+
 **Cue, then go live.** Clicking an item in the plan fills the slide grid but
 doesn't touch the projector — the grid says *Cued — not on screen*. Click a
 slide (or press `Enter`, or `1`–`9`) to put it up. A stray click, or the first
 half of the double-click that opens the editor, can't put the wrong thing in
 front of the room.
 
-**Services.** One service is open at a time. *Services & Songs* keeps the
+**Services.** One service is open at a time. *Services* keeps the
 rest; *New from this one* copies the order into a fresh service dated next
 Sunday. Opening or creating a service saves the current one first.
 
@@ -177,6 +211,31 @@ song credits too.
 *Import…* on the projection laptop merges it. *Back up everything* does the
 same for every service, the library and all media. Re-importing the same file
 updates rather than duplicates.
+
+## Installing it as an app
+
+Press **⤓ Install app** in the top bar. In Chrome and Edge that installs it in
+one click; in Safari (Mac) it's *File → Add to Dock*, on an iPad *Share → Add
+to Home Screen* — the button shows the steps for the browser you're in. Once
+installed it:
+
+- has its own icon (a gold cross) in the dock, Launchpad or Start menu, and
+  opens in its own window straight onto **Live** — no browser tabs or address
+  bar in front of the congregation;
+- runs with **no internet and no server**: the readings calendar, lectionary,
+  prayers, font and PDF reader are all inside;
+- offers shortcuts on its icon (right-click): Live, Readings of the day,
+  Announcements, Projector output.
+
+Install from the hosted copy (an `https://` address) or from `localhost`
+while the app is running; after that the installed app no longer needs either.
+The button disappears once the app is installed. Icons are drawn by
+`scripts/make-icons.py`.
+
+Verified in Chrome: service worker active with 42 files cached, Chrome
+reports the app installable with no manifest errors, and with the network
+off `/live`, `/readings` (showing the day from the built-in calendar),
+`/prayers`, `/announcements`, `/output` and `/stage` all open.
 
 ## Working offline
 
@@ -283,6 +342,8 @@ src/
   data/                lectionary.json, calendar/2025–2040, NOTICE.md (sources, licences)
 scripts/               build-lectionary.py, fetch-calendar.mjs — regenerate data/
   lib/bundle.js        .worship.json export / import, media included
+  lib/importer.js      pasted text, .txt, PDFs (pdf.js) and pictures → plan items
+  lib/announcements.js parish notices → the Announcements item
   routes/              Shell, LiveController, SlideComposer, MediaBrowser,
                        ThemeEditor, Output, Stage
   components/          ServicePlanner (dnd-kit), SlideCanvas

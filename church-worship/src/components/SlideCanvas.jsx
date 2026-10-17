@@ -25,7 +25,7 @@ const frameKey = (p) =>
     p.blackout,
     p.cleared,
     p.showLogo,
-    p.background?.mediaId ?? p.background?.value ?? '',
+    p.slide?.background?.mediaId ?? p.background?.mediaId ?? p.background?.value ?? '',
     p.theme?.id ?? '',
   ].join('|')
 

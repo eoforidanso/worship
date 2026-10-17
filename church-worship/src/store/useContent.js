@@ -72,58 +72,12 @@ const blankPlan = (title = 'New service') => ({
   title,
   date: nextSunday(),
   items: [],
+  autoTitle: true, // follow the liturgical day until someone types a title
 })
 
-const seedPlan = () => ({
-  id: uid('pl'),
-  title: 'Sunday Morning',
-  date: new Date().toISOString().slice(0, 10),
-  items: [
-    makeItem('text', {
-      title: 'Welcome',
-      slides: [blankSlide('Welcome\nto our gathering')],
-    }),
-    makeItem('song', {
-      title: 'Amazing Grace',
-      subtitle: 'John Newton',
-      slides: [
-        {
-          id: uid('sl'),
-          label: 'Verse 1',
-          body: 'Amazing grace how sweet the sound\nThat saved a wretch like me',
-        },
-        {
-          id: uid('sl'),
-          label: 'Verse 1',
-          body: 'I once was lost but now am found\nWas blind but now I see',
-        },
-        {
-          id: uid('sl'),
-          label: 'Verse 2',
-          body: "'Twas grace that taught my heart to fear\nAnd grace my fears relieved",
-        },
-        {
-          id: uid('sl'),
-          label: 'Verse 2',
-          body: 'How precious did that grace appear\nThe hour I first believed',
-        },
-      ],
-    }),
-    makeItem('scripture', {
-      title: 'Psalm 23:1–3',
-      subtitle: 'ESV',
-      slides: [
-        { id: uid('sl'), label: 'v1', body: 'The Lord is my shepherd; I shall not want.' },
-        {
-          id: uid('sl'),
-          label: 'v2',
-          body: 'He makes me lie down in green pastures.\nHe leads me beside still waters.',
-        },
-        { id: uid('sl'), label: 'v3', body: 'He restores my soul.' },
-      ],
-    }),
-  ],
-})
+// A fresh install starts on an empty Mass for the coming Sunday; the planner
+// offers to add the day's Mass, and the title follows the liturgical day.
+const seedPlan = () => blankPlan('Sunday Mass')
 
 export const useContent = create(
   persist(
@@ -134,18 +88,28 @@ export const useContent = create(
       // Order of Mass texts: { [prayerId]: { use: 'en'|'la'|'parish', text, choice } }.
       // `text` is the parish's own wording, pasted once from its missal.
       prayers: {},
+      // Parish notices: [{ id, title, text, mediaId?, until?, active }], in display order.
+      announcements: [],
       themes: [DEFAULT_THEME, SCRIPTURE_THEME],
       media: [],
       logoUrl: null,
       logoId: null,
 
       // --- plan -----------------------------------------------------------
-      setPlanTitle: (title) => set((s) => ({ plan: { ...s.plan, title } })),
+      setPlanTitle: (title) => set((s) => ({ plan: { ...s.plan, title, autoTitle: false } })),
+      /** Name the service after its liturgical day, unless someone has named it. */
+      setAutoTitle: (title) => set((s) => (s.plan.autoTitle ? { plan: { ...s.plan, title } } : s)),
       setPlanDate: (date) => set((s) => ({ plan: { ...s.plan, date } })),
 
-      addItem: (type) => {
+      /** Add a new item after `afterId` (the selected item), or at the end. */
+      addItem: (type, afterId = null) => {
         const item = makeItem(type, { title: defaultTitle(type) })
-        set((s) => ({ plan: { ...s.plan, items: [...s.plan.items, item] } }))
+        set((s) => {
+          const items = [...s.plan.items]
+          const at = items.findIndex((it) => it.id === afterId)
+          items.splice(at === -1 ? items.length : at + 1, 0, item)
+          return { plan: { ...s.plan, items } }
+        })
         return item.id
       },
 
@@ -159,6 +123,54 @@ export const useContent = create(
           items.splice(i + 1, 0, copy)
           return { plan: { ...s.plan, items } }
         }),
+
+      /** Put ready-made items (imports) after `afterId`, or at the end. */
+      insertItems: (newItems, afterId = null) =>
+        set((s) => {
+          const items = [...s.plan.items]
+          const at = items.findIndex((it) => it.id === afterId)
+          items.splice(at === -1 ? items.length : at + 1, 0, ...newItems)
+          return { plan: { ...s.plan, items } }
+        }),
+
+      // --- announcements ---------------------------------------------------
+      addAnnouncement: (patch = {}) => {
+        const a = { id: uid('an'), title: '', text: '', mediaId: null, until: '', active: true, ...patch }
+        set((s) => ({ announcements: [...s.announcements, a] }))
+        return a.id
+      },
+      updateAnnouncement: (id, patch) =>
+        set((s) => ({ announcements: s.announcements.map((a) => (a.id === id ? { ...a, ...patch } : a)) })),
+      removeAnnouncement: (id) => set((s) => ({ announcements: s.announcements.filter((a) => a.id !== id) })),
+      moveAnnouncement: (id, by) =>
+        set((s) => {
+          const list = [...s.announcements]
+          const i = list.findIndex((a) => a.id === id)
+          const j = i + by
+          if (i === -1 || j < 0 || j >= list.length) return s
+          ;[list[i], list[j]] = [list[j], list[i]]
+          return { announcements: list }
+        }),
+
+      /**
+       * Put the announcements item in the service, replacing any earlier one:
+       * 'after-communion' goes just before the Blessing and Dismissal (where
+       * notices are given at Mass), 'before' at the very start.
+       */
+      placeAnnouncements: (item, where = 'after-communion') =>
+        set((s) => {
+          const items = s.plan.items.filter((it) => !it.announcements)
+          let at = items.length
+          if (where === 'before') at = items[0]?.lectionary?.part === 'title' ? 1 : 0
+          else {
+            const blessing = items.findIndex((it) => it.lectionary?.part === 'blessing-dismissal')
+            if (blessing !== -1) at = blessing
+          }
+          items.splice(at, 0, item)
+          return { plan: { ...s.plan, items } }
+        }),
+
+      clearPlan: () => set((s) => ({ plan: { ...s.plan, items: [] } })),
 
       removeItem: (id) =>
         set((s) => ({
@@ -333,7 +345,7 @@ export const useContent = create(
         set((s) => {
           const all = [s.plan, ...s.services.filter((p) => p.id !== s.plan.id)]
           const src = fromId ? all.find((p) => p.id === fromId) : null
-          const next = blankPlan(src ? src.title : 'New service')
+          const next = blankPlan('New service')
           if (src) next.items = src.items.map((it) => cloneItem(it))
           return {
             services: upsert(s.services, { ...s.plan, savedAt: Date.now() }),
@@ -413,7 +425,9 @@ export const useContent = create(
           for (const [id, p] of Object.entries(bundle.prayers ?? {})) {
             if (!s.prayers[id]?.text?.trim()) prayers[id] = p // fill, never overwrite a parish's own text
           }
-          return { themes, media, songs, services, prayers }
+          let announcements = s.announcements
+          for (const a of bundle.announcements ?? []) announcements = upsert(announcements, a)
+          return { themes, media, songs, services, prayers, announcements }
         }),
 
       // --- themes ----------------------------------------------------------
@@ -459,10 +473,11 @@ export const useContent = create(
     }),
     {
       name: 'worship-content-v1',
-      version: 3,
+      version: 4,
       // v0 → v1: services and library arrived, and the Scripture theme gained
       // a reference footer. Earlier saves get both without losing anything.
       migrate: (state, from) => {
+        if (from < 4) state.announcements ??= []
         if (from < 3) {
           // v3: the built-in themes move to the bundled serif. Only values still
           // at the old defaults change — a parish's own tuning is kept.
@@ -497,6 +512,7 @@ export const useContent = create(
         services: s.services,
         songs: s.songs,
         prayers: s.prayers,
+        announcements: s.announcements,
         themes: s.themes,
         logoId: s.logoId,
         logoUrl: s.logoUrl?.startsWith('blob:') ? null : s.logoUrl,

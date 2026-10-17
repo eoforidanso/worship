@@ -28,7 +28,8 @@ export default function LiveController() {
   // Next is what the Next key will put up: the following slide, or the first
   // slide of the following item — drawn in *that* item's theme and background.
   const next = useMemo(() => {
-    if (!item) return null
+    // Before the Mass starts, Next puts up the first item.
+    if (!item) return plan.items[0] ? { item: plan.items[0], slide: plan.items[0].slides[0] } : null
     if (slideIndex + 1 < item.slides.length) return { item, slide: item.slides[slideIndex + 1] }
     const i = plan.items.findIndex((it) => it.id === item.id)
     const nextItem = plan.items[i + 1]
@@ -85,7 +86,9 @@ export default function LiveController() {
               ? next.item.id === item?.id
                 ? next.slide.label || 'Next slide'
                 : `→ ${next.item.title}`
-              : 'End of service'}
+              : plan.items.length
+                ? 'End of service'
+                : 'The plan is empty'}
           </p>
         </figure>
       </section>
