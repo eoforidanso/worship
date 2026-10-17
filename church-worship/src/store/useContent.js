@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { uid } from '../lib/id'
+import { starterSongs } from '../data/hymns'
 
 /**
  * Everything that survives a reload: the service plan, the slide content, the
@@ -30,6 +31,7 @@ export const DEFAULT_THEME = {
   outline: false,
   padding: 120,
   showFooter: false, // reference line along the bottom (scripture, credits)
+  liturgical: true, // background follows the day's liturgical colour
   background: { kind: 'color', value: '#0b1020' },
 }
 
@@ -84,7 +86,7 @@ export const useContent = create(
     (set, get) => ({
       plan: seedPlan(),
       services: [], // saved services, newest first; `plan` is the open one
-      songs: [], // reusable library items (songs, liturgy, standing announcements)
+      songs: starterSongs(), // reusable library items; a fresh install starts with the starter hymnal
       // Order of Mass texts: { [prayerId]: { use: 'en'|'la'|'parish', text, choice } }.
       // `text` is the parish's own wording, pasted once from its missal.
       prayers: {},
@@ -94,6 +96,9 @@ export const useContent = create(
       media: [],
       logoUrl: null,
       logoId: null,
+      parish: { name: '' }, // shown on the Mass title slide and the window title
+      lastBackupAt: null, // epoch ms of the last "Back up everything"
+      backupSnoozedUntil: 0,
 
       // --- plan -----------------------------------------------------------
       setPlanTitle: (title) => set((s) => ({ plan: { ...s.plan, title, autoTitle: false } })),
@@ -219,6 +224,7 @@ export const useContent = create(
                 ? it
                 : {
                     ...it,
+                    needs: undefined, // edited by hand: whatever the builder flagged is the operator's call now
                     slides: it.slides.map((sl) => (sl.id === slideId ? { ...sl, ...patch } : sl)),
                   },
             ),
@@ -273,7 +279,9 @@ export const useContent = create(
             plan: {
               ...s.plan,
               items: s.plan.items.map((it) =>
-                it.id === itemId ? { ...it, slides: slides.length ? slides : [blankSlide()] } : it,
+                it.id === itemId
+                  ? { ...it, needs: undefined, slides: slides.length ? slides : [blankSlide()] }
+                  : it,
               ),
             },
           }
@@ -285,7 +293,9 @@ export const useContent = create(
           plan: {
             ...s.plan,
             items: s.plan.items.map((it) =>
-              it.id === itemId ? { ...it, slides: slides.length ? slides : [blankSlide()] } : it,
+              it.id === itemId
+                ? { ...it, needs: undefined, slides: slides.length ? slides : [blankSlide()] }
+                : it,
             ),
           },
         })),
@@ -301,10 +311,16 @@ export const useContent = create(
           // Hymns already chosen for this Mass survive a rebuild in their slot.
           const chosen = new Map(
             items
-              .filter((it) => it.lectionary?.group === group && it.lectionary.slot && !it.placeholder)
+              // Hymns the operator chose (not empty places, not mere suggestions) are kept.
+              .filter(
+                (it) =>
+                  it.lectionary?.group === group && it.lectionary.slot && !it.placeholder && !it.suggested,
+              )
               .map((it) => [it.lectionary.slot, it]),
           )
-          const fresh = newItems.map((it) => (it.placeholder && chosen.get(it.lectionary?.slot)) || it)
+          const fresh = newItems.map(
+            (it) => ((it.placeholder || it.suggested) && chosen.get(it.lectionary?.slot)) || it,
+          )
           const kept = items.filter((it) => it.lectionary?.group !== group)
           let at
           if (first !== -1) at = first
@@ -384,7 +400,7 @@ export const useContent = create(
           const items = [...s.plan.items]
           const target = items.findIndex((it) => it.id === afterId)
           // A hymn placeholder in the Order of Mass is filled, not appended to.
-          if (target !== -1 && items[target].placeholder) {
+          if (target !== -1 && (items[target].placeholder || items[target].suggested)) {
             const ph = items[target]
             item.subtitle = ph.title
             item.lectionary = ph.lectionary
@@ -400,6 +416,13 @@ export const useContent = create(
 
       updateLibraryEntry: (libId, patch) =>
         set((s) => ({ songs: s.songs.map((x) => (x.id === libId ? { ...x, ...patch } : x)) })),
+
+      /** Put back any starter hymns that were deleted. */
+      restoreStarterHymns: () =>
+        set((s) => {
+          const have = new Set(s.songs.map((x) => x.id))
+          return { songs: [...s.songs, ...starterSongs().filter((x) => !have.has(x.id))] }
+        }),
 
       removeFromLibrary: (libId) => set((s) => ({ songs: s.songs.filter((x) => x.id !== libId) })),
 
@@ -466,6 +489,9 @@ export const useContent = create(
         })),
 
       setLogo: (url, id = null) => set({ logoUrl: url, logoId: id }),
+      setParish: (patch) => set((s) => ({ parish: { ...s.parish, ...patch } })),
+      markBackedUp: () => set({ lastBackupAt: Date.now(), backupSnoozedUntil: 0 }),
+      snoozeBackup: (days = 3) => set({ backupSnoozedUntil: Date.now() + days * 86400000 }),
 
       // --- selectors -------------------------------------------------------
       getItem: (id) => get().plan.items.find((it) => it.id === id) ?? null,
@@ -473,10 +499,36 @@ export const useContent = create(
     }),
     {
       name: 'worship-content-v1',
-      version: 4,
+      // Repair anything damaged on the way in (a bad import, a hand-edited
+      // file): every item gets a title and at least one slide, so nothing in
+      // the plan can break a screen.
+      merge: (persisted, current) => {
+        const merged = { ...current, ...(persisted ?? {}) }
+        const fix = (plan) => plan && { ...plan, items: (plan.items ?? []).filter(Boolean).map(repairItem) }
+        merged.plan = fix(merged.plan) ?? current.plan
+        merged.services = (merged.services ?? []).map(fix)
+        merged.songs = (merged.songs ?? []).filter(Boolean).map(repairItem)
+        return merged
+      },
+      version: 6,
       // v0 → v1: services and library arrived, and the Scripture theme gained
       // a reference footer. Earlier saves get both without losing anything.
       migrate: (state, from) => {
+        if (from < 6) {
+          // v6: the starter hymnal, added once (anything already there is kept).
+          const have = new Set((state.songs ?? []).map((x) => x.id))
+          state.songs = [...(state.songs ?? []), ...starterSongs().filter((x) => !have.has(x.id))]
+        }
+        if (from < 5) {
+          // v5: the built-in themes take the liturgical colour as background.
+          state.themes = (state.themes ?? []).map((t) =>
+            (t.id === 'theme_default' || t.id === 'theme_scripture') && t.liturgical == null
+              ? { ...t, liturgical: true }
+              : t,
+          )
+          state.parish ??= { name: '' }
+          state.lastBackupAt ??= null
+        }
         if (from < 4) state.announcements ??= []
         if (from < 3) {
           // v3: the built-in themes move to the bundled serif. Only values still
@@ -515,12 +567,30 @@ export const useContent = create(
         announcements: s.announcements,
         themes: s.themes,
         logoId: s.logoId,
+        parish: s.parish,
+        lastBackupAt: s.lastBackupAt,
+        backupSnoozedUntil: s.backupSnoozedUntil,
         logoUrl: s.logoUrl?.startsWith('blob:') ? null : s.logoUrl,
         media: s.media.map(({ url, ...rest }) => rest),
       }),
     },
   ),
 )
+
+function repairItem(it) {
+  const slides =
+    Array.isArray(it.slides) && it.slides.length ? it.slides : [{ id: uid('sl'), label: '', body: '' }]
+  return {
+    ...it,
+    id: it.id ?? uid('it'),
+    title: typeof it.title === 'string' ? it.title : 'Untitled',
+    slides: slides.map((sl) => ({
+      ...sl,
+      id: sl?.id ?? uid('sl'),
+      body: typeof sl?.body === 'string' ? sl.body : '',
+    })),
+  }
+}
 
 function upsert(list, entry) {
   const i = list.findIndex((x) => x.id === entry.id)

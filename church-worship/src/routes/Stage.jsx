@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useContent } from '../store/useContent'
 import { useLive } from '../store/useLive'
 import { useContentSync } from '../lib/useContentSync'
+import { useLiturgicalColour } from '../lib/useLiturgicalColour'
 import { formatCountdown } from '../lib/render'
 
 /**
@@ -11,6 +12,7 @@ import { formatCountdown } from '../lib/render'
  */
 export default function Stage() {
   useContentSync()
+  useLiturgicalColour()
   const plan = useContent((s) => s.plan)
   const { itemId, slideIndex, blackout, cleared, message, countdownTo } = useLive()
   const now = useClock()

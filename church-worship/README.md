@@ -41,6 +41,59 @@ npm run server
 The **Output** window (`/output`) is what the congregation sees. Open it with the
 button in the top bar, drag it to the projector, double-click for fullscreen.
 
+## Planning a Mass
+
+**One click.** On an empty service, *✠ Build this day's Mass* adds
+everything at once: the readings, the Order of Mass (Gloria and Creed as
+the day requires), hymns suggested from the library for each place, and
+this week's notices after Communion. Everything stays editable. *Choose
+readings and hymns first →* opens the Readings page instead.
+
+**The Readings page**, top to bottom:
+
+- **Find the day.** *◀◀ Sunday* and *Sunday ▶▶* step a week at a time,
+  ◀ ▶ a day; *Jump to…* goes to the next Advent, Christmas, Ash Wednesday,
+  Palm Sunday, Easter, Ascension, Pentecost, Assumption, All Saints or Christ
+  the King; *Find a feast or saint…* searches the next year by name
+  ("Assumption", "Joseph"); *Week / Month* switches between the week strip
+  and a month calendar showing each day's colour and feasts. On a tablet,
+  swipe left or right to change day.
+- **Check the readings.** Each reading has its citation, a choice of text
+  (*Douay-Rheims (built in)* or *Our lectionary (paste)*), and for the psalm
+  the response, outlined until it is filled in. Click a reading to see its
+  full text in the **preview** beside the list (inside the row on a tablet).
+- **Hymns.** One suggestion per place — Entrance, Offertory, Communion,
+  Recessional — chosen for the season and feast from the library: Advent and
+  Christmas hymns only in their seasons, Communion hymns at Communion (the
+  Benediction hymns only after them), Our Lady's hymns at the end, or
+  throughout on her feasts. Choices rotate week to week. Change any, or leave
+  a place empty. The parish's own songs are matched by their words (Mary,
+  Bread, Spirit, Alleluia…).
+- **One button.** *Add Mass to service* sits in a bar at the bottom of the
+  page with a one-line summary of what it will add ("4 readings · Whole Mass
+  · Gloria · Creed · one screen per reading · 1 notice"). *Options* holds the
+  rest: whole Mass or readings only, whole reading or a few verses a slide,
+  title slide, Gloria and Creed, the Creed and Mystery of Faith wording,
+  notices, and *Paste a list of psalm responses…*. Afterwards a checklist
+  shows ✓ for each part added and ⚠ for what still needs attention.
+- **Psalm responses for the year.** Paste lines like
+  `2026-10-18 | Give the Lord glory and honor.` or
+  `Psalm 23:1-3a, 3b-4, 5, 6 | The Lord is my shepherd…` and they fill in
+  when those days are opened. The app never invents a response — the wording
+  is your lectionary's.
+
+**Is it ready?** The service plan shows *Ready 24 of 27* with a bar, a ✓ or
+⚠ on every row (hover for what's missing), and a count per part of the Mass
+(*Liturgy of the Word 7/8*). It flags an empty hymn place, a psalm without its
+response, the Lenten acclamation still to add, a reading whose text didn't
+arrive, a picture missing on this computer, and empty slides. Press the
+readiness bar to jump to the first thing to check. Editing a flagged item
+clears its flag.
+
+**On a tablet**, *☰* in the top bar shows and hides the service plan; on a
+narrow screen it slides over the page and closes after an item is picked.
+Buttons and rows are larger on touch screens.
+
 ## Mass readings
 
 Open **Readings** (or, on an empty service, press *✠ Add this day's Mass* in
@@ -153,6 +206,25 @@ given) or **before Mass, on a loop** that changes every few seconds. Adding
 again replaces the notices already in the service. Notices are saved, and
 travel in *Back up everything* files with their pictures.
 
+**Starter hymnal.** The song library starts with 25 well-loved hymns and
+chants whose words are public domain — *Holy God, We Praise Thy Name*,
+*Faith of Our Fathers*, *Immaculate Mary*, *Hail, Holy Queen*, *Sweet
+Sacrament Divine*, *Soul of My Saviour*, *O Come, All Ye Faithful*, *O
+Sacred Head Surrounded*, *Come, Holy Ghost*, the *Tantum Ergo*, *Salve
+Regina*, *Regina Caeli* and more — one verse per slide with its refrain.
+Search by name, a line, or a season (*Christmas*, *Lent*, *Our Lady*,
+*Eucharist*). Edit or delete any; *Restore starter hymns* puts deleted ones
+back.
+
+**Parish name and logo.** Set them at the top of the *Services* tab. The
+name heads every Mass title slide and the window title; the logo is what
+`L` shows.
+
+**Backups.** Everything lives in this one browser, so once there is real
+work in it the app asks — at most weekly, and never on the projector — to
+*Back up now* (a single file with every service, hymn, notice, prayer text
+and picture). *Later* asks again in three days.
+
 **Paste or add files.** *⊕ Paste or file* under the plan (or drop files
 anywhere on the plan) brings in outside content, after the selected item:
 
@@ -165,6 +237,29 @@ anywhere on the plan) brings in outside content, after the selected item:
 
 Pictures and PDF pages go into the offline media library, so they project
 with the network off and travel inside exported service files.
+
+**Output on the projector in one click.** With a projector connected,
+*Output* (in Chrome or Edge, after you allow it once) opens the projector
+window filling the second screen. Elsewhere it opens a window to drag
+across. In the Output window, double-click or press `F` for full screen; the
+hint shows only while the mouse moves over it.
+
+**Never an error on the projector.** If anything goes wrong while drawing,
+the Output and Stage windows show plain black — as if Blackout were pressed
+— and recover by themselves a moment later. A fault in one operator tab
+shows a short recovery card there; the plan, the controls and the projector
+keep running. Damaged items (a bad import, a hand-edited file) are repaired
+as the app loads.
+
+**Phone remote.** Run the app with `npm start` (app + relay) on the laptop.
+On Live, press *📱 Phone remote*: scan the QR code with a phone on the same
+wifi and it opens big *Previous / Next* buttons, *Blackout*, *Hide text* and
+*Logo*, with what's on screen and what's next. The QR code carries the
+laptop's 4-digit PIN; anyone typing the address by hand needs the PIN too,
+so nobody else on the wifi can drive the projector (*New PIN* changes it).
+If two operator windows are open, only the first obeys the phone. The phone
+remote needs the app running on the laptop — the hosted `https://` copy
+can't reach the relay.
 
 **Cue, then go live.** Clicking an item in the plan fills the slide grid but
 doesn't touch the projector — the grid says *Cued — not on screen*. Click a
@@ -199,8 +294,17 @@ slides and into blackout or the logo, instead of hard-cutting.
 classic book face of missals and Bibles, in semibold so it holds up on a
 projector. It is bundled with the app — no font is fetched at Mass — and the
 app waits for it before drawing, so a slide never flashes in a fallback
-font. Other fonts are in the Themes tab; Twi and Fante letters such as ɛ and
-ɔ fall back to a system font if the theme's font lacks them.
+font. Other fonts are in the Themes tab. Garamond includes the letters of Twi,
+Fante, Ga and Ewe — ɛ, ɔ, ŋ, ɖ, ʋ — and they are loaded before the first
+slide is drawn, so a hymn in Twi is set in the same face as the Latin.
+
+**Liturgical colours.** The built-in themes take their background from the
+day: violet in Advent and Lent, a warm gold for white days (Christmas,
+Easter, feasts of the Lord and of Our Lady), green in Ordinary Time, red for
+Pentecost, the Passion and martyrs, rose for Gaudete and Laetare — deep
+tones with a soft light from above, so white text stays easy to read. Turn
+it off per theme (*Liturgical colour background* in Themes), or pick a
+colour, which switches it off.
 
 **Footers.** Themes have a *Reference footer* toggle (on for Scripture). It
 shows the slide's own footer, else the item's title and subtitle — good for
@@ -344,10 +448,19 @@ scripts/               build-lectionary.py, fetch-calendar.mjs — regenerate da
   lib/bundle.js        .worship.json export / import, media included
   lib/importer.js      pasted text, .txt, PDFs (pdf.js) and pictures → plan items
   lib/announcements.js parish notices → the Announcements item
+  lib/remote.js        phone remote: PIN, commands, status for the phone
+  lib/redraw.js        redraw on font load; the day's liturgical colour
+  lib/autoMass.js      "Build this day's Mass" in one press
+  lib/hymnSuggest.js   hymn suggestions per place, by season and feast
+  lib/readiness.js     what each plan item still needs
+  lib/responses.js     psalm responses: remembered, and imported by the year
+  components/SafeBoundary.jsx  black-not-error on the projector; recovery card elsewhere
+  data/hymns.js        the starter hymnal (public-domain texts)
   routes/              Shell, LiveController, SlideComposer, MediaBrowser,
                        ThemeEditor, Output, Stage
   components/          ServicePlanner (dnd-kit), SlideCanvas
-server/index.js        WebSocket relay, replays the last state to late joiners
+server/index.js        WebSocket relay (replays the last state to late joiners) and
+                       /info: this laptop's address for the phone remote
 ```
 
 Two decisions worth knowing about:
@@ -378,8 +491,11 @@ re-project a slide on its own.
 - **Video has no audio path.** Video backgrounds are drawn to the canvas muted
   (autoplay requires it, and slides carry no sound). Audio tracks as a media
   type aren't implemented.
-- **The relay is unauthenticated.** It's fine on a closed church LAN and not fine
-  anywhere else.
+- **The relay is unauthenticated.** Projector and stage windows on other
+  machines trust it; the phone remote is protected by its PIN. Fine on a
+  church wifi, not on the open internet.
+- **Ghana's own feasts** (national or diocesan) are not in the calendar yet —
+  send the list and they can be added.
 
 ## Updating the lectionary data
 
@@ -438,6 +554,28 @@ Ordinary weekday, Advent Sunday, St Andrew, Christmas, Ash Wednesday, Holy
 Thursday, the Easter Octave and All Saints; 27 parts in order with the
 evangelist named; a library song filling the Entrance Hymn place and
 surviving a rebuild; pasted parish wording used in place of the built-in.
+
+Final touches, end to end in a clean Chrome profile: a fresh install is
+named after its day, has the 25 starter hymns and no backup nag; season
+search finds the Christmas hymns; the parish name heads the Mass title slide
+and window title; Garamond's extended-Latin file loads up front and a Twi
+line renders in it; the 29th Sunday's background samples green; Output
+opens; through the relay a second device with the wrong PIN is refused, with
+the right PIN advances the laptop and mirrors the slide, and Blackout
+reaches the laptop. A deliberately corrupt item is repaired on load; before
+that repair, the projector showed black and recovered on the next good
+slide, and the broken tab showed its recovery card with the rest working.
+
+Planning workflow, end to end in a clean Chrome profile: one-click Mass on a
+fresh install (27 items, four hymns suggested, "Ready 26 of 27" with only the
+psalm response flagged); feast search to the Assumption; Jump to Easter;
+Next Sunday; the month view; the preview pane's text; Easter hymn
+suggestions; the options panel; a pasted response list filling in after a
+reload; the checklist after adding. On a 768×1024 touch tablet: the plan
+panel starts closed and ☰ opens it, swiping changes day, the preview opens in
+the reading row, and the action bar stays on screen. Hymn suggestions checked
+across Ordinary Time, Advent, Christmas, Lent, Easter, Pentecost and the
+Assumption.
 
 Not yet exercised: the WebSocket relay across two machines, the theme
 editor, and importing a bundle with a large video.

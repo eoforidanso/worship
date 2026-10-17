@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { renderSlide } from '../lib/render'
+import { useRedraw } from '../lib/redraw'
 
 /**
  * A 16:9 canvas that draws one slide. Used for planner thumbnails, the
@@ -17,6 +18,28 @@ import { renderSlide } from '../lib/render'
 
 const FADE_MS = 350
 
+/**
+ * A slide that fails to draw (a corrupt picture, a bad value) shows black —
+ * never a half-drawn frame — and is reported once, not sixty times a second.
+ */
+let lastFault = ''
+function safeRender(ctx, opts) {
+  try {
+    renderSlide(ctx, opts)
+    return true
+  } catch (err) {
+    const msg = String(err?.message ?? err)
+    if (msg !== lastFault) console.error('[slide]', err)
+    lastFault = msg
+    ctx.restore?.()
+    ctx.setTransform?.(1, 0, 0, 1, 0, 0)
+    ctx.globalAlpha = 1
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height)
+    return false
+  }
+}
+
 const frameKey = (p) =>
   [
     // Slide id, not its text: an edit to the live slide should land at once,
@@ -27,6 +50,7 @@ const frameKey = (p) =>
     p.showLogo,
     p.slide?.background?.mediaId ?? p.background?.mediaId ?? p.background?.value ?? '',
     p.theme?.id ?? '',
+    p.theme?.liturgical ? p.litColour : '',
   ].join('|')
 
 export default function SlideCanvas({
@@ -48,7 +72,19 @@ export default function SlideCanvas({
   const canvasRef = useRef(null)
   // Props are read through a ref so the rAF loop never needs re-subscribing.
   const propsRef = useRef(null)
-  propsRef.current = { slide, theme, background, blackout, cleared, logoUrl, showLogo, countdownTo, footer }
+  const { tick, litColour } = useRedraw()
+  propsRef.current = {
+    slide,
+    theme,
+    background,
+    blackout,
+    cleared,
+    logoUrl,
+    showLogo,
+    countdownTo,
+    footer,
+    litColour,
+  }
   const fadeRef = useRef(fade)
   fadeRef.current = fade
 
@@ -76,7 +112,7 @@ export default function SlideCanvas({
         fadeStart = performance.now()
       }
       lastKey = key
-      renderSlide(ctx, { ...propsRef.current, onReady: draw })
+      if (!safeRender(ctx, { ...propsRef.current, onReady: draw })) return
       if (fadeStart) {
         const t = (performance.now() - fadeStart) / FADE_MS
         if (t >= 1 || snap.width !== canvas.width) {
@@ -129,9 +165,22 @@ export default function SlideCanvas({
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')
-    const draw = () => renderSlide(ctx, { ...propsRef.current, onReady: draw })
+    const draw = () => safeRender(ctx, { ...propsRef.current, onReady: draw })
     draw()
-  }, [animate, slide, theme, background, blackout, cleared, logoUrl, showLogo, countdownTo, footer])
+  }, [
+    animate,
+    slide,
+    theme,
+    background,
+    blackout,
+    cleared,
+    logoUrl,
+    showLogo,
+    countdownTo,
+    footer,
+    tick,
+    litColour,
+  ])
 
   return (
     <div ref={wrapRef} className={`slide-canvas ${className}`} style={style}>

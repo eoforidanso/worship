@@ -103,7 +103,8 @@ export default function ThemeEditor() {
           <input
             type="color"
             value={theme.background.kind === 'color' ? theme.background.value : '#000000'}
-            onChange={(e) => set({ background: { kind: 'color', value: e.target.value } })}
+            // Choosing a colour means "this colour", so the liturgical one steps aside.
+            onChange={(e) => set({ background: { kind: 'color', value: e.target.value }, liturgical: false })}
           />
         </label>
 
@@ -125,6 +126,11 @@ export default function ThemeEditor() {
           <Toggle label="Shadow" value={theme.shadow} onChange={(v) => set({ shadow: v })} />
           <Toggle label="Outline" value={theme.outline} onChange={(v) => set({ outline: v })} />
           <Toggle label="Reference footer" value={!!theme.showFooter} onChange={(v) => set({ showFooter: v })} />
+          <Toggle
+            label="Liturgical colour background"
+            value={!!theme.liturgical}
+            onChange={(v) => set({ liturgical: v })}
+          />
         </div>
 
         {theme.id !== DEFAULT_THEME.id && (

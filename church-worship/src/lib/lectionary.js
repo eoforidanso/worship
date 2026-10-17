@@ -282,3 +282,58 @@ export function partsOf(readings) {
 }
 
 export const isPsalm = (part) => part.startsWith('responsorial_psalm')
+
+// --- finding days ----------------------------------------------------------------
+
+/**
+ * Celebrations whose name matches `query`, from `fromIso` on (this year and
+ * next), each listed once at its next date: "Assumption", "Joseph", "Advent".
+ */
+export async function searchCelebrations(query, fromIso, limit = 8) {
+  const q = query.trim().toLowerCase()
+  if (q.length < 2) return []
+  const y = Number(fromIso.slice(0, 4))
+  const out = []
+  const seen = new Set()
+  for (const year of [y, y + 1]) {
+    const days = await loadYear(year).catch(() => ({}))
+    for (const date of Object.keys(days).sort()) {
+      if (date < fromIso) continue
+      for (const [key, name, grade, color, , vigilFor] of days[date]) {
+        if (vigilFor !== undefined || seen.has(key) || !name.toLowerCase().includes(q)) continue
+        seen.add(key)
+        out.push({ date, key, name, grade, color })
+      }
+    }
+  }
+  // Solemnities and feasts first, then by date.
+  return out.sort((a, b) => b.grade - a.grade || a.date.localeCompare(b.date)).slice(0, limit)
+}
+
+/** The next date (on or after `fromIso`) a celebration falls. */
+export async function nextOccurrence(key, fromIso) {
+  const y = Number(fromIso.slice(0, 4))
+  for (const year of [y, y + 1]) {
+    const days = await loadYear(year).catch(() => ({}))
+    const hit = Object.keys(days)
+      .sort()
+      .find((d) => d >= fromIso && days[d].some((r) => r[0] === key && r.length < 6))
+    if (hit) return hit
+  }
+  return null
+}
+
+/** Landmarks of the year for "Jump to". */
+export const LANDMARKS = [
+  ['Advent1', 'First Sunday of Advent'],
+  ['Christmas', 'Christmas'],
+  ['Epiphany', 'Epiphany'],
+  ['AshWednesday', 'Ash Wednesday'],
+  ['PalmSun', 'Palm Sunday'],
+  ['Easter', 'Easter Sunday'],
+  ['Ascension', 'Ascension'],
+  ['Pentecost', 'Pentecost'],
+  ['Assumption', 'Assumption'],
+  ['AllSaints', 'All Saints'],
+  ['ChristKing', 'Christ the King'],
+]

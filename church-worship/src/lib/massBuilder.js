@@ -20,6 +20,7 @@
 import { uid } from './id'
 import { fetchPassage, incipit, CHECK_BOOKS, parseCitation } from './bible'
 import { isPsalm } from './lectionary'
+import { useContent } from '../store/useContent'
 
 const SOURCE = 'Douay-Rheims'
 
@@ -57,7 +58,8 @@ export function balance(units, limit) {
   if (total <= limit * 1.15 || units.length < 2) return [units]
   for (let n = Math.ceil(total / limit); n <= units.length; n++) {
     const groups = partition(units, sizes, n)
-    if (Math.max(...groups.map((g) => g.reduce((a, u) => a + words(u.text), 0))) <= limit * 1.15) return groups
+    if (Math.max(...groups.map((g) => g.reduce((a, u) => a + words(u.text), 0))) <= limit * 1.15)
+      return groups
   }
   return units.map((u) => [u])
 }
@@ -312,7 +314,13 @@ export async function buildMass(
       subtitle: option.mass || cycleText,
       themeId: 'theme_default',
       background: null,
-      slides: [slide('', [option.title, option.mass].filter(Boolean).join('\n'))],
+      // The parish's name heads the title slide when it has been set.
+      slides: [
+        slide(
+          '',
+          [useContent.getState().parish?.name?.trim(), option.title, option.mass].filter(Boolean).join('\n'),
+        ),
+      ],
       notes: cycleText,
       autoAdvance: 0,
       lectionary: { group, part: 'title' },
@@ -335,6 +343,9 @@ export async function buildMass(
       }
     }
     if (built.warning) warnings.push(`${p.label}: ${built.warning}`)
+    const needs = []
+    if (built.warning?.startsWith('Lent')) needs.push('acclamation')
+    if (built.warning?.includes('Paste the text in the composer')) needs.push('text')
     items.push({
       id: uid('it'),
       type: 'scripture',
@@ -346,6 +357,7 @@ export async function buildMass(
       notes: [option.title, built.warning].filter(Boolean).join('\n'),
       autoAdvance: 0,
       lectionary: { group, part: p.part, citation },
+      needs, // cleared once the slides are edited
     })
   }
   onProgress?.(1, 'Done')

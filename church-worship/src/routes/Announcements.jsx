@@ -153,7 +153,7 @@ function Notice({ a, index, count, date, theme }) {
   }
 
   return (
-    <li className={`notice${showsOn(a, date) ? '' : ' off'}`}>
+    <li className={`notice-card${showsOn(a, date) ? '' : ' off'}`}>
       <div className="notice-preview">
         <SlideCanvas slide={slide} theme={theme} />
         <span className="muted small">

@@ -1,11 +1,14 @@
 import { useEffect, useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import SafeBoundary from '../components/SafeBoundary'
 import ServicePlanner from '../components/ServicePlanner'
 import { useLive, useCue } from '../store/useLive'
 import { useContent } from '../store/useContent'
 import { subscribeStatus } from '../lib/broadcast'
 import { subscribePwa, applyUpdate, dismissOfflineReady, promptInstall, installHelp } from '../lib/pwa'
 import { describeDay } from '../lib/lectionary'
+import { useLiturgicalColour } from '../lib/useLiturgicalColour'
+import { startRemoteControl } from '../lib/remote'
 
 const TABS = [
   { to: '/live', label: 'Live' },
@@ -20,20 +23,53 @@ const TABS = [
 
 export default function Shell() {
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+
+  // The service plan panel: always open on a laptop by default; on a tablet
+  // it slides over the page and closes once an item is picked.
+  const narrow = () => window.matchMedia('(max-width: 900px)').matches
+  const [railOpen, setRailOpen] = useState(() => {
+    const saved = readPref('worship-rail')
+    return saved ? saved === 'open' && !narrow() : !narrow()
+  })
+  const setRail = (open) => {
+    setRailOpen(open)
+    writePref('worship-rail', open ? 'open' : 'closed')
+  }
+  useEffect(() => {
+    const close = () => narrow() && setRailOpen(false)
+    window.addEventListener('worship-picked', close)
+    return () => window.removeEventListener('worship-picked', close)
+  }, [])
   const planTitle = useContent((s) => s.plan.title)
   const setPlanTitle = useContent((s) => s.setPlanTitle)
   const planDate = useContent((s) => s.plan.date)
   const planId = useContent((s) => s.plan.id)
+  const parishName = useContent((s) => s.parish?.name)
+  useEffect(() => {
+    document.title = parishName?.trim() ? `${parishName.trim()} — Church Worship` : 'Church Worship'
+  }, [parishName])
   const setPlanDate = useContent((s) => s.setPlanDate)
 
   useGlobalShortcuts()
   useAutoAdvance()
+  useEffect(() => startRemoteControl(), [])
+  useLiturgicalColour()
   const status = useConnectionStatus()
 
   return (
-    <div className="shell">
+    <div className={`shell${railOpen ? '' : ' rail-closed'}`}>
       <header className="topbar">
         <div className="brand">
+          <button
+            className="icon-btn rail-toggle"
+            onClick={() => setRail(!railOpen)}
+            title={railOpen ? 'Hide the service plan' : 'Show the service plan'}
+            aria-label="Service plan"
+            aria-expanded={railOpen}
+          >
+            ☰
+          </button>
           <span className="brand-mark" aria-hidden="true" />
           <input
             className="plan-title"
@@ -67,20 +103,29 @@ export default function Shell() {
           <button className="btn" onClick={() => openWindow('/stage', 'stage')}>
             Stage
           </button>
-          <button className="btn btn-primary" onClick={() => openWindow('/output', 'output')}>
+          <button
+            className="btn btn-primary"
+            onClick={openOutput}
+            title="Open the projector window — on the second screen when one is connected"
+          >
             Output
           </button>
         </div>
       </header>
 
       <OfflineNotice />
+      <BackupReminder />
 
       <div className="body">
         <aside className="rail">
-          <ServicePlanner onEdit={(id) => navigate(`/compose/${id}`)} />
+          <SafeBoundary variant="page">
+            <ServicePlanner onEdit={(id) => navigate(`/compose/${id}`)} />
+          </SafeBoundary>
         </aside>
         <main className="main">
-          <Outlet />
+          <SafeBoundary variant="page" resetKey={pathname}>
+            <Outlet />
+          </SafeBoundary>
         </main>
       </div>
     </div>
@@ -158,6 +203,37 @@ function openWindow(path, name) {
 }
 
 /**
+ * Open the projector window on the projector. Where the browser can see the
+ * other screens (Chrome/Edge, after asking once), it opens filling the
+ * second screen; elsewhere it opens a normal window to drag across.
+ */
+async function openOutput() {
+  const url = `${import.meta.env.BASE_URL}/output`.replace(/\/{2,}/g, '/')
+  if ('getScreenDetails' in window) {
+    try {
+      const details = await window.getScreenDetails()
+      const target =
+        details.screens.find((s) => s !== details.currentScreen && !s.isInternal) ??
+        details.screens.find((s) => s !== details.currentScreen)
+      if (target) {
+        const features = [
+          'popup',
+          'fullscreen', // honoured where the browser allows full-screen pop-ups
+          `left=${target.availLeft}`,
+          `top=${target.availTop}`,
+          `width=${target.availWidth}`,
+          `height=${target.availHeight}`,
+        ].join(',')
+        if (window.open(url, 'output', features)) return
+      }
+    } catch {
+      /* permission refused, or no API: open normally */
+    }
+  }
+  window.open(url, 'output', 'width=1280,height=720')
+}
+
+/**
  * Operator-only chrome: confirmation that the app is cached, and an update
  * that waits to be asked for. Neither ever appears on /output or /stage.
  */
@@ -191,6 +267,52 @@ function OfflineNotice() {
   }
 
   return null
+}
+
+/**
+ * Everything lives in this one browser. Once there is something worth
+ * losing, ask for a backup weekly — gently, and never on the projector.
+ */
+function BackupReminder() {
+  const last = useContent((s) => s.lastBackupAt)
+  const snoozed = useContent((s) => s.backupSnoozedUntil)
+  const hasWork = useContent(
+    // The starter hymnal ships with the app, so on its own it isn't work to lose.
+    (s) =>
+      s.songs.some((x) => !x.starter) ||
+      s.services.length > 0 ||
+      s.announcements.length > 0 ||
+      s.plan.items.length > 5,
+  )
+  const snoozeBackup = useContent((s) => s.snoozeBackup)
+  const [busy, setBusy] = useState(false)
+  const now = Date.now()
+  const week = 7 * 86400000
+  if (!hasWork || now < (snoozed ?? 0) || (last && now - last < week)) return null
+  const days = last ? Math.floor((now - last) / 86400000) : null
+  return (
+    <div className="notice" role="status">
+      <span>
+        {days == null
+          ? 'Nothing here has been backed up yet. A backup file keeps your services, hymns, notices and pictures safe if this computer fails.'
+          : `Last backup ${days} days ago.`}
+      </span>
+      <button
+        className="btn btn-primary"
+        disabled={busy}
+        onClick={async () => {
+          setBusy(true)
+          const { exportBundle } = await import('../lib/bundle')
+          await exportBundle('all').finally(() => setBusy(false))
+        }}
+      >
+        {busy ? 'Saving…' : 'Back up now'}
+      </button>
+      <button className="btn" onClick={() => snoozeBackup(3)}>
+        Later
+      </button>
+    </div>
+  )
 }
 
 function useConnectionStatus() {
@@ -297,4 +419,20 @@ function useGlobalShortcuts() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+}
+
+function readPref(key, fallback = null) {
+  try {
+    return localStorage.getItem(key) ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
+function writePref(key, value) {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    /* preference only */
+  }
 }

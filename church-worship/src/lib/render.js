@@ -143,7 +143,41 @@ function drawCover(ctx, img, w, h) {
   ctx.drawImage(img, (w - dw) / 2, (h - dh) / 2, dw, dh)
 }
 
+/**
+ * Liturgical colours as projector backgrounds: deep enough that white text
+ * stays easy to read, with a soft light from above. "White" days (Christmas,
+ * Easter, feasts of the Lord and of Our Lady) are a warm gold rather than
+ * white, which would wash the words out.
+ */
+const LITURGICAL = {
+  purple: ['#1f1033', '#3b2160'],
+  white: ['#241d10', '#4d3f1e'],
+  gold: ['#241d10', '#4d3f1e'],
+  green: ['#0c2216', '#1d4a2f'],
+  red: ['#330b0e', '#62191e'],
+  pink: ['#361626', '#6b3048'],
+  rose: ['#361626', '#6b3048'],
+  black: ['#0a0a0a', '#262626'],
+}
+
+export const hasLiturgical = (colour) => colour in LITURGICAL
+
+function drawLiturgical(ctx, colour, w, h) {
+  const [base, glow] = LITURGICAL[colour]
+  ctx.fillStyle = base
+  ctx.fillRect(0, 0, w, h)
+  const g = ctx.createRadialGradient(w / 2, h * 0.28, 0, w / 2, h * 0.28, w * 0.75)
+  g.addColorStop(0, glow)
+  g.addColorStop(1, base)
+  ctx.fillStyle = g
+  ctx.fillRect(0, 0, w, h)
+}
+
 function drawBackground(ctx, bg, w, h, onReady) {
+  if (bg?.kind === 'liturgical') {
+    drawLiturgical(ctx, bg.colour, w, h)
+    return
+  }
   if (!bg || bg.kind === 'color') {
     ctx.fillStyle = bg?.value ?? '#000000'
     ctx.fillRect(0, 0, w, h)
@@ -219,6 +253,7 @@ export function renderSlide(ctx, opts) {
     showLogo = false,
     countdownTo = null,
     footer = '',
+    litColour = '',
     onReady,
   } = opts
 
@@ -238,7 +273,11 @@ export function renderSlide(ctx, opts) {
 
   // A slide can carry its own picture (imported photos, PDF pages); otherwise
   // the item's background, otherwise the theme's.
-  drawBackground(ctx, slide?.background ?? background ?? theme.background, w, h, onReady)
+  const themeBg =
+    theme.liturgical && hasLiturgical(litColour)
+      ? { kind: 'liturgical', colour: litColour }
+      : theme.background
+  drawBackground(ctx, slide?.background ?? background ?? themeBg, w, h, onReady)
 
   if (showLogo) {
     const img = getImage(logoUrl, onReady)

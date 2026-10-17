@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import SlideCanvas from '../components/SlideCanvas'
 import { useContent, DEFAULT_THEME } from '../store/useContent'
 import { useLive } from '../store/useLive'
 import { useContentSync } from '../lib/useContentSync'
+import { useLiturgicalColour } from '../lib/useLiturgicalColour'
 import { footerFor } from '../lib/render'
 
 /**
@@ -14,6 +15,7 @@ import { footerFor } from '../lib/render'
  */
 export default function Output() {
   useContentSync()
+  useLiturgicalColour()
   const ref = useRef(null)
 
   const plan = useContent((s) => s.plan)
@@ -37,8 +39,35 @@ export default function Output() {
     else ref.current?.requestFullscreen?.()
   }
 
+  // F toggles full screen too. The hint shows only while someone moves the
+  // mouse over this window — the congregation never sees it otherwise.
+  const [hint, setHint] = useState(false)
+  const [full, setFull] = useState(!!document.fullscreenElement)
+  useEffect(() => {
+    let t
+    const onMove = () => {
+      setHint(true)
+      clearTimeout(t)
+      t = setTimeout(() => setHint(false), 2500)
+    }
+    const onKey = (e) => {
+      if (e.key === 'f' || e.key === 'F') toggleFullscreen()
+    }
+    const onFs = () => setFull(!!document.fullscreenElement)
+    window.addEventListener('mousemove', onMove)
+    window.addEventListener('keydown', onKey)
+    document.addEventListener('fullscreenchange', onFs)
+    return () => {
+      clearTimeout(t)
+      window.removeEventListener('mousemove', onMove)
+      window.removeEventListener('keydown', onKey)
+      document.removeEventListener('fullscreenchange', onFs)
+    }
+  }, [])
+
   return (
-    <div className="output" ref={ref} onDoubleClick={toggleFullscreen} title="Double-click for fullscreen">
+    <div className="output" ref={ref} onDoubleClick={toggleFullscreen}>
+      {hint && !full && <div className="output-hint">Double-click or press F for full screen</div>}
       <div className="output-stage">
         <SlideCanvas
           slide={slide}

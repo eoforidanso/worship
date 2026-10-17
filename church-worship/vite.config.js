@@ -81,7 +81,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,mjs,css,html,png,svg,woff,woff2}'],
+        globPatterns: ['**/*.{js,mjs,css,html,png,svg,woff2}'], // woff2 only: every current browser reads it
         // pdf.js (PDF import) is ~2MB; still precached so a PDF can be added offline.
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         // Every surface is a client-side route: /live, /compose/:id, /media,
@@ -97,5 +97,8 @@ export default defineConfig({
       },
     }),
   ],
-  server: { port: 5173 },
+  // Listen on the local network too, so a phone on the church wifi can open
+  // the remote at http://<this laptop>:5173/remote.
+  server: { port: 5173, host: true },
+  preview: { host: true },
 })

@@ -9,6 +9,7 @@ import { useLive, useCue } from '../store/useLive'
 import { urlFor } from '../lib/mediaStore'
 import { ORDER, SECTIONS } from '../data/orderOfMass'
 import { filesToItems, textToItem } from '../lib/importer'
+import { readiness } from '../lib/readiness'
 
 const TYPE_META = {
   song: { icon: '♪', label: 'Song' },
@@ -34,6 +35,7 @@ export default function ServicePlanner({ onEdit }) {
   const addItem = useContent((s) => s.addItem)
   const clearPlan = useContent((s) => s.clearPlan)
   const insertItems = useContent((s) => s.insertItems)
+  const ready = useMemo(() => readiness(items), [items])
   const [importing, setImporting] = useState(false)
   const [dropping, setDropping] = useState(false)
   const [dropped, setDropped] = useState(null) // files dropped on the plan, for the panel
@@ -61,6 +63,7 @@ export default function ServicePlanner({ onEdit }) {
   // way nothing reaches the projector until a slide is chosen.
   const pick = (id) => {
     cue(id)
+    window.dispatchEvent(new Event('worship-picked')) // a tablet closes the plan panel
     if (pathname.startsWith('/compose')) navigate(`/compose/${id}`)
     else if (!pathname.startsWith('/live')) navigate('/live')
   }
@@ -126,13 +129,30 @@ export default function ServicePlanner({ onEdit }) {
         </span>
       </div>
 
+      {items.length > 0 && (
+        <button
+          className={`readiness${ready.ready === ready.total ? ' all' : ''}`}
+          onClick={() => {
+            const first = items.find((it) => ready.items.get(it.id)?.length)
+            if (first) pick(first.id)
+          }}
+          title={
+            ready.ready === ready.total ? 'Every part is ready' : 'Show the first part that needs attention'
+          }
+        >
+          <span className="readiness-text">
+            {ready.ready === ready.total
+              ? '✓ Ready for Mass'
+              : `Ready ${ready.ready} of ${ready.total} · ${ready.total - ready.ready} to check →`}
+          </span>
+          <span className="readiness-bar">
+            <span style={{ width: `${(100 * ready.ready) / Math.max(1, ready.total)}%` }} />
+          </span>
+        </button>
+      )}
+
       {items.length === 0 && (
-        <div className="planner-empty">
-          <button className="btn btn-primary full" onClick={() => navigate('/readings')}>
-            ✠ Add this day’s Mass
-          </button>
-          <p className="muted small">The Order of Mass and the readings for the service date, in one step.</p>
-        </div>
+        <OneClickMass onDone={(id) => id && cue(id)} onCustomise={() => navigate('/readings')} />
       )}
 
       <DndContext
@@ -147,21 +167,24 @@ export default function ServicePlanner({ onEdit }) {
               const section = sectionOf(item)
               // Compare with the last item that had a section, so a song added
               // mid-Mass doesn't make its section's heading appear twice.
-              const prev = items
-                .slice(0, i)
-                .map(sectionOf)
-                .filter(Boolean)
-                .at(-1)
+              const prev = items.slice(0, i).map(sectionOf).filter(Boolean).at(-1)
               const heading = section && section !== prev ? section : null
+              // "4/5": how much of this part of the Mass is ready.
+              const sectionItems = heading ? items.filter((x) => sectionOf(x) === section) : []
+              const sectionReady = sectionItems.filter((x) => !ready.items.get(x.id)?.length).length
               return (
                 <Fragment key={item.id}>
                   {heading && (
                     <li className="plan-section" aria-hidden="true">
-                      {heading}
+                      <span>{heading}</span>
+                      <span className={sectionReady === sectionItems.length ? 'sec-ok' : 'sec-warn'}>
+                        {sectionReady}/{sectionItems.length}
+                      </span>
                     </li>
                   )}
                   <PlanRow
                     item={item}
+                    issues={ready.items.get(item.id) ?? []}
                     live={item.id === liveItemId}
                     cued={item.id === cuedId && item.id !== liveItemId}
                     onPick={() => pick(item.id)}
@@ -303,6 +326,45 @@ function ImportPanel({ onFiles, onText, onClose, incoming, onTaken }) {
   )
 }
 
+/**
+ * An empty service: build the whole Mass for its date in one press — the
+ * readings, the prayers, suggested hymns and this week's notices — or go and
+ * choose them first.
+ */
+function OneClickMass({ onDone, onCustomise }) {
+  const date = useContent((s) => s.plan.date)
+  const [progress, setProgress] = useState(null)
+  const [error, setError] = useState('')
+  const build = async () => {
+    setError('')
+    setProgress('Starting…')
+    try {
+      const { buildDefaultMass } = await import('../lib/autoMass')
+      const out = await buildDefaultMass(date, { onProgress: (_, label) => setProgress(label) })
+      onDone(out.items.find((it) => it.type === 'scripture')?.id ?? out.items[0]?.id)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setProgress(null)
+    }
+  }
+  return (
+    <div className="planner-empty">
+      <button className="btn btn-primary full" onClick={build} disabled={!!progress || !date}>
+        {progress ? 'Building the Mass…' : '✠ Build this day’s Mass'}
+      </button>
+      <p className="muted small">
+        {progress ||
+          error ||
+          'Readings, the Order of Mass, suggested hymns and this week’s notices — everything stays editable.'}
+      </p>
+      <button className="btn btn-ghost btn-sm" onClick={onCustomise}>
+        Choose readings and hymns first →
+      </button>
+    </div>
+  )
+}
+
 /** Type-ahead over the song library, so a song goes in without leaving Live. */
 function LibraryQuickAdd({ afterId, onAdded }) {
   const songs = useContent((s) => s.songs)
@@ -317,6 +379,7 @@ function LibraryQuickAdd({ afterId, onAdded }) {
         (x) =>
           x.title.toLowerCase().includes(needle) ||
           (x.subtitle ?? '').toLowerCase().includes(needle) ||
+          (x.notes ?? '').toLowerCase().includes(needle) || // "Christmas", "Our Lady", "Eucharist"…
           x.slides.some((sl) => sl.body.toLowerCase().includes(needle)),
       )
       .slice(0, 6)
@@ -362,7 +425,7 @@ function LibraryQuickAdd({ afterId, onAdded }) {
   )
 }
 
-function PlanRow({ item, live, cued, onPick, onGoLive, onEdit }) {
+function PlanRow({ item, live, cued, onPick, onGoLive, onEdit, issues = [] }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
   })
@@ -412,6 +475,13 @@ function PlanRow({ item, live, cued, onPick, onGoLive, onEdit }) {
                   .filter(Boolean)
                   .join(' · ')}
           </span>
+        </span>
+        <span
+          className={`plan-status ${issues.length ? 'warn' : 'ok'}`}
+          title={issues.length ? issues.join('\n') : 'Ready'}
+          aria-label={issues.length ? `Needs attention: ${issues.join('; ')}` : 'Ready'}
+        >
+          {issues.length ? '⚠' : '✓'}
         </span>
       </button>
 

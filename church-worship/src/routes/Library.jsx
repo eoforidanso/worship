@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { useContent } from '../store/useContent'
 import { useLive, useCue } from '../store/useLive'
 import { exportBundle, importBundle } from '../lib/bundle'
+import { starterSongs } from '../data/hymns'
+
+const starterIds = starterSongs().map((x) => x.id)
 
 /**
  * Services and the song library.
@@ -14,9 +17,61 @@ import { exportBundle, importBundle } from '../lib/bundle'
 export default function Library() {
   return (
     <div className="library">
+      <Parish />
       <Services />
       <Songs />
     </div>
+  )
+}
+
+/** The parish's name and logo — set once, used on title slides and the Logo key. */
+function Parish() {
+  const parish = useContent((s) => s.parish)
+  const logoUrl = useContent((s) => s.logoUrl)
+  const { setParish, setLogo } = useContent()
+  const fileRef = useRef(null)
+  const pickLogo = async (file) => {
+    if (!file?.type.startsWith('image/')) return
+    const { storePicture } = await import('../lib/importer')
+    const id = await storePicture(file, file.name, ['logo'])
+    const { urlFor } = await import('../lib/mediaStore')
+    setLogo(urlFor(id), id)
+  }
+  return (
+    <section className="parish-card">
+      {logoUrl ? <img src={logoUrl} alt="Parish logo" /> : <span className="parish-logo-empty">Logo</span>}
+      <div className="parish-fields">
+        <input
+          className="notice-title"
+          placeholder="Parish name — e.g. St. Peter’s Catholic Church, Kumasi"
+          value={parish?.name ?? ''}
+          onChange={(e) => setParish({ name: e.target.value })}
+        />
+        <div className="row">
+          <button className="btn btn-sm" onClick={() => fileRef.current?.click()}>
+            {logoUrl ? 'Change logo' : 'Choose logo'}
+          </button>
+          {logoUrl && (
+            <button className="btn btn-ghost btn-sm" onClick={() => setLogo(null, null)}>
+              Remove
+            </button>
+          )}
+          <span className="muted small">
+            The name heads each Mass title slide; the logo is what <kbd>L</kbd> shows.
+          </span>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => {
+              pickLogo(e.target.files[0])
+              e.target.value = ''
+            }}
+          />
+        </div>
+      </div>
+    </section>
   )
 }
 
@@ -185,7 +240,11 @@ function Services() {
 
 function Songs() {
   const songs = useContent((s) => s.songs)
-  const { addFromLibrary, removeFromLibrary } = useContent()
+  const { addFromLibrary, removeFromLibrary, restoreStarterHymns } = useContent()
+  const missingStarters = useContent((s) => {
+    const have = new Set(s.songs.map((x) => x.id))
+    return starterIds.filter((id) => !have.has(id)).length
+  })
   const cue = useCue((s) => s.cue)
   const cuedId = useCue((s) => s.itemId)
   const [q, setQ] = useState('')
@@ -199,6 +258,7 @@ function Songs() {
       (x) =>
         x.title.toLowerCase().includes(needle) ||
         (x.subtitle ?? '').toLowerCase().includes(needle) ||
+        (x.notes ?? '').toLowerCase().includes(needle) || // "Christmas", "Our Lady", "Eucharist"…
         x.slides.some((sl) => sl.body.toLowerCase().includes(needle)),
     )
   }, [songs, q])
@@ -233,7 +293,7 @@ function Songs() {
       </div>
       <input
         className="search"
-        placeholder="Search titles, authors and lyrics…"
+        placeholder="Search titles, lyrics or a season — Christmas, Lent, Our Lady…"
         value={q}
         onChange={(e) => setQ(e.target.value)}
       />
@@ -280,6 +340,11 @@ function Songs() {
           </li>
         ))}
       </ul>
+      {missingStarters > 0 && (
+        <button className="btn btn-ghost btn-sm" onClick={restoreStarterHymns}>
+          Restore {missingStarters} starter hymn{missingStarters === 1 ? '' : 's'}
+        </button>
+      )}
       {added && (
         <p className="added-note small">
           {added.message} Select an item in the plan first to choose where songs go.

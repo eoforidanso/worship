@@ -61,6 +61,7 @@ export async function exportBundle(scope = 'service') {
     themes,
     media,
     logoId: s.logoId,
+    parish: s.parish,
     prayers: s.prayers, // the parish's own Order of Mass texts travel with every file
     announcements: s.announcements,
     blobs,
@@ -71,6 +72,7 @@ export async function exportBundle(scope = 'service') {
       ? `worship-backup-${today()}.worship.json`
       : `${slug(s.plan.title)}-${s.plan.date || today()}.worship.json`
   download(new Blob([JSON.stringify(bundle)], { type: 'application/json' }), name)
+  if (scope === 'all') useContent.getState().markBackedUp()
   return { services: services.length, media: Object.keys(blobs).length }
 }
 

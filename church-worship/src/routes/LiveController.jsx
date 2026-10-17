@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import SlideCanvas from '../components/SlideCanvas'
 import { useContent, DEFAULT_THEME } from '../store/useContent'
 import { useLive, useCue } from '../store/useLive'
 import { footerFor } from '../lib/render'
+import { remotePin, newRemotePin } from '../lib/remote'
 
 const themeFor = (themes, item) => themes.find((t) => t.id === item?.themeId) ?? themes[0] ?? DEFAULT_THEME
 
@@ -136,6 +137,89 @@ export default function LiveController() {
   )
 }
 
+/**
+ * How to connect a phone: the address on this network, a QR code that also
+ * carries the PIN, and the PIN itself. Needs the relay (npm start).
+ */
+function PhoneRemote() {
+  const [open, setOpen] = useState(false)
+  const [info, setInfo] = useState(null) // { url, qr } | { error }
+  const [pin, setPin] = useState(() => remotePin())
+
+  useEffect(() => {
+    if (!open) return
+    let live = true
+    ;(async () => {
+      if (location.protocol === 'https:') {
+        return live && setInfo({ error: 'hosted' })
+      }
+      try {
+        const res = await fetch(`http://${location.hostname}:8080/info`)
+        const { addresses } = await res.json()
+        const host = addresses[0]
+        if (!host) return live && setInfo({ error: 'nonet' })
+        const port = location.port ? `:${location.port}` : ''
+        const base = `http://${host}${port}${import.meta.env.BASE_URL}remote`.replace(/([^:])\/{2,}/g, '$1/')
+        const QR = await import('qrcode')
+        const qr = await QR.toDataURL(`${base}#pin=${pin}`, { margin: 1, width: 220 })
+        if (live) setInfo({ url: base, qr, others: addresses.slice(1) })
+      } catch {
+        if (live) setInfo({ error: 'relay' })
+      }
+    })()
+    return () => {
+      live = false
+    }
+  }, [open, pin])
+
+  return (
+    <span className="install">
+      <button className={`btn${open ? ' on' : ''}`} onClick={() => setOpen((v) => !v)}>
+        📱 Phone remote
+      </button>
+      {open && (
+        <span className="install-help remote-help" role="dialog">
+          <strong>Drive the projector from a phone</strong>
+          {!info && <span className="muted">Looking for the relay…</span>}
+          {info?.error === 'hosted' && (
+            <span>
+              The phone remote works when the app runs on this laptop: open a terminal in the app folder and
+              run <code>npm start</code>, then use the address it prints.
+            </span>
+          )}
+          {info?.error === 'relay' && (
+            <span>
+              Start the relay: in the app folder run <code>npm start</code> (instead of{' '}
+              <code>npm run dev</code>), then open this again.
+            </span>
+          )}
+          {info?.error === 'nonet' && (
+            <span>This laptop isn’t on a network. Join the church wifi first.</span>
+          )}
+          {info?.url && (
+            <>
+              <img src={info.qr} alt="QR code for the phone remote" className="remote-qr" />
+              <span>
+                Scan with the phone’s camera, or open <code>{info.url}</code>
+              </span>
+              <span>
+                PIN <strong className="remote-pin-show">{pin}</strong>{' '}
+                <button className="btn btn-ghost btn-sm" onClick={() => setPin(newRemotePin())}>
+                  New PIN
+                </button>
+              </span>
+              <span className="muted small">The phone must be on the same wifi as this laptop.</span>
+            </>
+          )}
+          <button className="btn btn-sm" onClick={() => setOpen(false)}>
+            Close
+          </button>
+        </span>
+      )}
+    </span>
+  )
+}
+
 function Transport() {
   const live = useLive()
   const [seconds, setSeconds] = useState(300)
@@ -162,6 +246,7 @@ function Transport() {
         <button className={`btn${live.showLogo ? ' on' : ''}`} onClick={live.toggleLogo}>
           Logo <kbd>L</kbd>
         </button>
+        <PhoneRemote />
       </div>
 
       <div className="transport-group">
