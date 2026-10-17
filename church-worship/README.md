@@ -1,4 +1,7 @@
-# Church Worship
+# Ambo
+
+*The Mass, on screen.* The ambo is where the Word of God is proclaimed;
+this is the app that puts the readings, prayers and hymns before the people.
 
 Presentation software for a Catholic parish, in the shape of EasyWorship: plan
 the Mass, compose the slides, then drive the projector live. The Lectionary is
@@ -44,10 +47,11 @@ button in the top bar, drag it to the projector, double-click for fullscreen.
 ## Planning a Mass
 
 **Everything is built in.** The calendar, the whole Lectionary, the prayers
-of the Mass, the starter hymnal *and the entire Douay-Rheims Bible* (all 73
-books, 35,805 verses) ship inside the app. A Mass builds in well under a
-second on a laptop with no internet at all. `scripts/fetch-bible.mjs`
-regenerates the Bible files.
+of the Mass, the starter hymnal *and two whole Catholic Bibles* — the World
+English Bible and the Douay-Rheims, all 73 books each — ship inside the app.
+A Mass builds in well under a second on a laptop with no internet at all.
+`scripts/build-webbe.py` and `scripts/fetch-bible.mjs` regenerate the Bible
+files.
 
 **Templates.** Under the one-click button, *Other services…* builds a
 **Saturday Vigil** (Sunday's readings, dated the Saturday), a **Weekday
@@ -77,7 +81,7 @@ readings and hymns first →* opens the Readings page instead.
   and a month calendar showing each day's colour and feasts. On a tablet,
   swipe left or right to change day.
 - **Check the readings.** Each reading has its citation, a choice of text
-  (*Douay-Rheims (built in)* or *Our lectionary (paste)*), and for the psalm
+  (*World English Bible*, *Douay-Rheims* or *Our lectionary (paste)*), and for the psalm
   the response, outlined until it is filled in. Click a reading to see its
   full text in the **preview** beside the list (inside the row on a tablet).
 - **Hymns.** One suggestion per place — Entrance, Offertory, Communion,
@@ -140,9 +144,15 @@ arrive, a picture missing on this computer, and empty slides. Press the
 readiness bar to jump to the first thing to check. Editing a flagged item
 clears its flag.
 
-**On a tablet**, *☰* in the top bar shows and hides the service plan; on a
-narrow screen it slides over the page and closes after an item is picked.
-Buttons and rows are larger on touch screens.
+**On a tablet or phone**, *☰* in the top bar shows and hides the service
+plan; on a narrow screen it slides over the page and closes after an item is
+picked. Buttons and rows are larger on touch screens. On a phone the whole
+app fits the screen — nothing scrolls sideways except the tab row and the
+week strip, which you swipe: the top bar is two compact rows (the service
+date moves to Readings and Services), Live has big *Previous* / *Next*
+buttons, the Readings controls stack, hymn choices stack, the *Add Mass*
+bar spans the screen, and pop-ups stay inside it. Checked at 390 × 844
+(iPhone size) on every tab.
 
 ## Mass readings
 
@@ -216,24 +226,34 @@ bishops' conference, so it can't ship in a public app: paste it once under
 *Our missal* and it is used at every Mass and saved in every backup file.
 Lines starting `R.` are the people's.
 
-**The text.** Readings fill in from the **Douay-Rheims** Bible — public domain,
-and the free English Catholic Bible that has every book the Lectionary uses
-(Sirach, Wisdom, Baruch, Tobit, Maccabees). Its English is older than the
-lectionary at the ambo. For any reading choose **Paste** and paste your own
+**The text.** The readings are the current Lectionary for Mass's — every
+Sunday, weekday and feast — and fill in from one of two public-domain
+Bibles that have every book the Lectionary uses (Sirach, Wisdom, Baruch,
+Tobit, Judith, Maccabees, and the Greek parts of Daniel and Esther):
+
+- the **World English Bible, British Edition** (the default) — modern
+  English, close to what is read at the ambo today;
+- the **Douay-Rheims** — the traditional Catholic English Bible ("thee" and
+  "thou").
+
+Choose between them under *Options → Bible* (remembered on the device), or
+for one reading in its row. Neither is the lectionary translation your
+parish proclaims from, which is licensed: for any reading choose **Paste** and paste your own
 lectionary's text instead: it goes on one screen the same way, split at
 sentence ends only if very long (psalms: blank line between stanzas, a line
 starting `R.` is the response). The same
 *Paste reading…* is in the composer for any scripture item.
 
-Douay-Rheims follows the Vulgate's numbering and the Lectionary the Hebrew;
-the app converts between them (most Psalms, Joel, Malachi, Hosea, Micah, parts
+The World English Bible is stored already renumbered to the Lectionary's
+(Hebrew) verse numbers — psalm headings removed, Joel 3, Malachi 3, Isaiah 9,
+Micah 5, Esther C:1–30 and the rest where English Bibles differ.
+Douay-Rheims follows the Vulgate's numbering; the app converts (most Psalms, Joel, Malachi, Hosea, Micah, parts
 of Isaiah, Zechariah, John 6 and others), so the slides show the citation as
 it is printed in the lectionary. For Sirach, Tobit, Judith and Esther, where
 the Vulgate text itself differs, the item says to compare with the lectionary.
 
-**Network.** The calendar and every citation are in the app. Only the
-Douay-Rheims text is fetched — at prep time — and it is then saved with the
-service, so Mass runs with the network off.
+**Network.** None needed. The calendar, every citation and both Bibles are in
+the app, and the text is saved with the service.
 
 ## Running a service
 
@@ -327,8 +347,9 @@ the cued item. ★ means it came from the library; pressing it updates the
 library copy with your edits.
 
 **Scripture.** In the composer, *Look up scripture…* fetches any passage —
-Douay-Rheims by default, or KJV, WEB, ASV, BBE and other public-domain
-translations from bible-api.com — one
+the built-in World English Bible (British) or Douay-Rheims by default (they
+work offline), or KJV, ASV, BBE and other public-domain translations from
+bible-api.com — one
 to four verses per slide, each slide with its own reference (`John 3:17 ·
 KJV`) along the bottom. It needs the network **during prep only** — the verses
 are saved into the service like any typed slide.
@@ -490,12 +511,12 @@ src/
                        also the operator-only cue
   lib/scripture.js     passage lookup → slides (composer)
   lib/lectionary.js    date → celebration, cycles, Mass options, readings
-  lib/bible.js         citation parser, Hebrew→Vulgate numbering, Douay-Rheims fetch
+  lib/bible.js         citation parser, the built-in Bibles, Hebrew→Vulgate numbering
   lib/massBuilder.js   readings → plan items, the way they are proclaimed
   lib/orderOfMass.js   the whole Mass: Order of Mass + readings + hymn places
   data/orderOfMass.js  the people's parts, traditional English and Latin, Gloria/Creed rules
   data/                lectionary.json, calendar/2025–2040, NOTICE.md (sources, licences)
-scripts/               build-lectionary.py, fetch-calendar.mjs — regenerate data/
+scripts/               build-lectionary.py, fetch-calendar.mjs, build-webbe.py, fetch-bible.mjs — regenerate data/
   lib/bundle.js        .worship.json export / import, media included
   lib/importer.js      pasted text, .txt, PDFs (pdf.js) and pictures → plan items
   lib/announcements.js parish notices → the Announcements item
@@ -509,6 +530,7 @@ scripts/               build-lectionary.py, fetch-calendar.mjs — regenerate da
   lib/timing.js        part lengths, the timeline, names to practise
   lib/dragTypes.js     dragging songs and readings into the plan
   components/PreviewDock.jsx  the projector preview beside the planning tabs
+  data/bible-web/      the World English Bible (British), lectionary numbering, one file per book
   data/bible/          the Douay-Rheims, one file per book
   data/ritual.js       Funeral and Wedding readings and their rites
   components/SafeBoundary.jsx  black-not-error on the projector; recovery card elsewhere
@@ -533,10 +555,10 @@ re-project a slide on its own.
 
 ## Limits
 
-- **Readings need the network at prep time** to fetch the Douay-Rheims text,
-  and only public-domain text is built in. The lectionary translations used at
-  the ambo (Jerusalem Bible, NABRE, RSV-CE) are copyrighted — paste them,
-  under your parish's licence.
+- **Only public-domain text is built in.** The lectionary translations used
+  at the ambo (Jerusalem Bible, NABRE, ESV-CE, RSV-CE) are copyrighted — paste
+  them, under your parish's licence. The World English Bible is close to them
+  in style but not word for word.
 - **Psalm responses and Lenten acclamations** aren't in the citations, so the
   operator types them (once — responses are remembered).
 - **16 optional memorials have no proper readings** in the data (e.g. St Rita,
@@ -597,6 +619,13 @@ footers, saving to and adding from the library, new service from the open one,
 export → delete media → import restoring the image, auto-advance looping and
 pausing on blackout, the Output window following with footer and a measured
 cross-fade, and Stage showing position and the next item's title.
+
+World English Bible (October 2026): all 2,452 citations in the lectionary and
+the funeral and wedding readings resolve to text; the renumbering was checked
+by reading (Isaiah 9:1 "The people who walked in darkness", Micah 5:1
+"Bethlehem Ephrathah", Joel 3:1, Malachi 3:19, Jonah 2:1, Zechariah 2:14,
+Esther C:12, Daniel 3:52 and 13, Romans 16:25–27, Psalm 51:3, Psalm 18 (19)),
+and a Mass built offline from the installed app in 0.3 s.
 
 Mass readings (October 2026): all 2,375 citations in the data parse; a
 random 60 of the converted ones resolve to Douay-Rheims text; the numbering

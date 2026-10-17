@@ -35,8 +35,8 @@ export default defineConfig({
       includeAssets: ['apple-touch-icon.png'],
       manifest: {
         id: `${base}live`,
-        name: 'Church Worship — Mass projection',
-        short_name: 'Church Worship',
+        name: 'Ambo — the Mass, on screen',
+        short_name: 'Ambo',
         description:
           'Project the Mass: the day’s readings from the Lectionary, the Order of Mass with its prayers, hymns and parish announcements. Works offline.',
         start_url: `${base}live`,

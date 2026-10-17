@@ -551,7 +551,10 @@ def main():
         'gospel_acclamation': 'Cf. Luke 1:28', 'gospel': 'John 19:25-34'}
 
     still = {sec: [k for k, v in d.items() if empty(v)] for sec, d in out.items()}
-    OUT.write_text(json.dumps(out, ensure_ascii=False, separators=(',', ':')))
+    text = json.dumps(out, ensure_ascii=False, separators=(',', ':'))
+    # A slip in the source data (Jude has one chapter).
+    text = text.replace('"Jude 17:20b-25"', '"Jude 1:17, 20b-25"')
+    OUT.write_text(text)
 
     print(f'overlap check: {agree} parts agree, {disagree} differ ({agree / max(1, agree + disagree):.1%} agree)')
     print('filled:', dict(filled), '| psalms given their stanzas:', sharpened)

@@ -29,7 +29,7 @@ export default function Output() {
   const slide = item?.slides[slideIndex] ?? null
 
   useEffect(() => {
-    document.title = 'Output — Church Worship'
+    document.title = 'Output — Ambo'
     document.body.classList.add('bare')
     return () => document.body.classList.remove('bare')
   }, [])

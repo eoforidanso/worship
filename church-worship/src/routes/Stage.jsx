@@ -32,7 +32,7 @@ export default function Stage() {
   }, [item, slideIndex, plan.items])
 
   useEffect(() => {
-    document.title = 'Stage — Church Worship'
+    document.title = 'Stage — Ambo'
     document.body.classList.add('bare')
     return () => document.body.classList.remove('bare')
   }, [])

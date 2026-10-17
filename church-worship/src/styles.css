@@ -291,10 +291,9 @@ input[type='range'] {
   flex-shrink: 0; /* the tabs give way instead — nothing overlaps */
 }
 .brand-mark {
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
-  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   flex-shrink: 0;
 }
 .plan-title {
@@ -2612,6 +2611,283 @@ body.bare:has(.remote) {
 }
 
 /* --- narrow screens ------------------------------------------------------ */
+
+/* --- phones ------------------------------------------------------------- */
+
+@media (max-width: 600px) {
+  body {
+    font-size: 14px;
+  }
+  .wide-label {
+    display: none;
+  }
+
+  /* Top bar: two compact rows — title + actions, then the tabs. */
+  .topbar {
+    padding: 8px 10px 4px;
+    gap: 6px;
+  }
+  .brand {
+    flex: 1 1 0;
+    min-width: 0;
+    flex-shrink: 1;
+    gap: 6px;
+  }
+  .plan-title {
+    width: auto;
+    flex: 1;
+    min-width: 0;
+    font-size: 14px;
+    padding: 4px 6px;
+  }
+  /* The title needs the room; the date is set on Readings and Services. */
+  .plan-date {
+    display: none;
+  }
+  .rail-toggle {
+    padding: 4px 6px;
+  }
+  .brand-mark {
+    width: 22px;
+    height: 22px;
+  }
+  .topbar-right {
+    gap: 4px;
+  }
+  .topbar-right .btn {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+  .conn {
+    display: none;
+  }
+  .tabs {
+    margin: 0 -10px;
+    padding: 0 10px;
+    -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent);
+    mask-image: linear-gradient(90deg, #000 85%, transparent);
+  }
+  .tab {
+    padding: 7px 10px;
+  }
+
+  /* Banners: one compact block. */
+  .notice {
+    padding: 8px 12px;
+    font-size: 12px;
+    gap: 8px;
+  }
+  .notice .btn {
+    padding: 5px 10px;
+    font-size: 12px;
+  }
+
+  /* Pop-ups pinned inside the screen. */
+  .install-help,
+  .remote-help,
+  .history-pop {
+    position: fixed;
+    top: 64px;
+    bottom: auto;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-height: calc(100vh - 80px);
+    overflow-y: auto;
+  }
+
+  /* Live: Previous and Next as two big thumb targets. */
+  .live {
+    padding: 10px;
+    gap: 10px;
+  }
+  .transport {
+    gap: 10px;
+    padding: 10px;
+  }
+  .transport-group {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+  .transport-prev,
+  .transport-next {
+    flex: 1;
+    min-height: 56px;
+    font-size: 17px;
+  }
+  .transport-next {
+    flex: 1.6;
+  }
+  .stage-msg {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .thumb-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  }
+  .main {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Readings */
+  .readings {
+    padding: 10px;
+    gap: 10px;
+  }
+  .date-bar {
+    gap: 4px;
+  }
+  .date-bar .btn {
+    padding: 6px 9px;
+  }
+  .date-bar input[type='date'] {
+    flex: 1 1 130px;
+    min-width: 130px;
+  }
+  .date-bar .jump {
+    flex: 1 1 100%;
+  }
+  .feast-search {
+    flex: 1 1 100%;
+    max-width: none;
+  }
+  .row.tight {
+    margin-left: 0;
+    width: 100%;
+  }
+  .row.tight .segmented {
+    margin-left: auto;
+  }
+  /* The week as a row you swipe along. */
+  .week {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    margin: 0 -10px;
+    padding: 0 10px 2px;
+    gap: 6px;
+  }
+  .week li {
+    flex: 0 0 104px;
+    scroll-snap-align: start;
+  }
+  .month {
+    padding: 6px;
+  }
+  .month-grid button {
+    min-height: 44px;
+    padding: 3px 4px;
+  }
+  .month-name {
+    font-size: 9.5px;
+  }
+  .celebration {
+    padding: 12px 14px;
+  }
+  .celebration .celebration-name {
+    font-size: 19px;
+  }
+  .celebration .row.between {
+    gap: 8px;
+  }
+  .part-row {
+    gap: 6px 10px;
+  }
+  .part-row .toggle {
+    width: auto;
+  }
+  .citation,
+  .part-row select:not(.translation) {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+  .hymn-pick {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 3px;
+  }
+  .hymn-pick span {
+    width: auto;
+  }
+  .action-bar {
+    margin: 0 -10px -10px;
+    padding: 10px;
+    gap: 8px;
+  }
+  .btn-xl {
+    flex: 1;
+    padding: 13px 14px;
+    font-size: 16px;
+  }
+  .options-panel {
+    gap: 8px 12px;
+    padding: 10px;
+  }
+  .checklist {
+    columns: 1;
+  }
+
+  /* Other tabs */
+  .library,
+  .notices,
+  .prayers {
+    padding: 10px;
+    gap: 12px;
+  }
+  .parish-card {
+    flex-wrap: wrap;
+  }
+  .svc-card {
+    flex-wrap: wrap;
+  }
+  .svc-actions {
+    margin-left: auto;
+  }
+  .prayer-row .part-row .segmented.source {
+    flex: 1 1 100%;
+  }
+  .media {
+    padding: 10px;
+  }
+  .media-toolbar {
+    flex-wrap: wrap;
+  }
+  .media-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+  .composer-main,
+  .composer-slides,
+  .composer-inspector,
+  .theme-controls,
+  .theme-list {
+    padding: 10px;
+  }
+  .shortcuts {
+    padding: 14px;
+  }
+  .shortcut-groups {
+    grid-template-columns: 1fr;
+  }
+  .timeline-total {
+    margin-left: 0;
+    flex-basis: 100%;
+  }
+  /* Plan header: title on its own line, the small controls beneath. */
+  .planner-head {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .planner-head h2 {
+    flex-basis: 100%;
+  }
+  .planner-head > .row {
+    width: 100%;
+    gap: 6px;
+  }
+  .planner-head .plan-view {
+    margin-left: auto;
+  }
+}
 
 /* Small laptop: the tabs take a row of their own rather than hide. */
 @media (max-width: 1060px) {

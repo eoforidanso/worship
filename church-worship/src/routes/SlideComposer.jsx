@@ -1,19 +1,19 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import SlideCanvas from '../components/SlideCanvas'
-import { useContent, DEFAULT_THEME } from '../store/useContent'
-import { useLive } from '../store/useLive'
-import { footerFor } from '../lib/render'
-import { TRANSLATIONS, lookup, versesToSlides } from '../lib/scripture'
-import { textToScreens } from '../lib/massBuilder'
+import { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import SlideCanvas from "../components/SlideCanvas";
+import { useContent, DEFAULT_THEME } from "../store/useContent";
+import { useLive } from "../store/useLive";
+import { footerFor } from "../lib/render";
+import { TRANSLATIONS, lookup, versesToSlides } from "../lib/scripture";
+import { textToScreens } from "../lib/massBuilder";
 
 export default function SlideComposer() {
-  const { itemId } = useParams()
-  const navigate = useNavigate()
+  const { itemId } = useParams();
+  const navigate = useNavigate();
 
-  const plan = useContent((s) => s.plan)
-  const themes = useContent((s) => s.themes)
-  const media = useContent((s) => s.media)
+  const plan = useContent((s) => s.plan);
+  const themes = useContent((s) => s.themes);
+  const media = useContent((s) => s.media);
   const {
     updateItem,
     addSlide,
@@ -23,59 +23,82 @@ export default function SlideComposer() {
     importLyrics,
     setSlides,
     saveToLibrary,
-  } = useContent()
+  } = useContent();
 
-  const item = plan.items.find((i) => i.id === itemId) ?? null
-  const [selected, setSelected] = useState(0)
-  const [bulk, setBulk] = useState('')
-  const [showBulk, setShowBulk] = useState(false)
-  const [showLookup, setShowLookup] = useState(false)
+  const item = plan.items.find((i) => i.id === itemId) ?? null;
+  const [selected, setSelected] = useState(0);
+  const [bulk, setBulk] = useState("");
+  const [showBulk, setShowBulk] = useState(false);
+  const [showLookup, setShowLookup] = useState(false);
 
   // Fall back to the first item so /compose with no id is still useful.
   useEffect(() => {
-    if (!itemId && plan.items.length) navigate(`/compose/${plan.items[0].id}`, { replace: true })
-  }, [itemId, plan.items, navigate])
+    if (!itemId && plan.items.length)
+      navigate(`/compose/${plan.items[0].id}`, { replace: true });
+  }, [itemId, plan.items, navigate]);
 
-  useEffect(() => setSelected(0), [itemId])
+  useEffect(() => setSelected(0), [itemId]);
   useEffect(() => {
     // A fresh scripture item opens straight onto the lookup.
-    const it = useContent.getState().getItem(itemId)
-    setShowLookup(!!it && it.type === 'scripture' && it.slides.length === 1 && !it.slides[0].body.trim())
-  }, [itemId])
+    const it = useContent.getState().getItem(itemId);
+    setShowLookup(
+      !!it &&
+        it.type === "scripture" &&
+        it.slides.length === 1 &&
+        !it.slides[0].body.trim(),
+    );
+  }, [itemId]);
 
-  if (!item) return <p className="empty pad">No item selected. Add one from the service plan.</p>
+  if (!item)
+    return (
+      <p className="empty pad">
+        No item selected. Add one from the service plan.
+      </p>
+    );
 
-  const theme = themes.find((t) => t.id === item.themeId) ?? themes[0] ?? DEFAULT_THEME
-  const slide = item.slides[Math.min(selected, item.slides.length - 1)] ?? null
+  const theme =
+    themes.find((t) => t.id === item.themeId) ?? themes[0] ?? DEFAULT_THEME;
+  const slide = item.slides[Math.min(selected, item.slides.length - 1)] ?? null;
 
   // Readings are prose: split by sentence. Songs: a blank line per slide.
-  const prose = item.type === 'scripture'
+  const prose = item.type === "scripture";
   const applyBulk = () => {
-    if (prose) setSlides(item.id, textToScreens(bulk, 220, '', item.subtitle))
-    else importLyrics(item.id, bulk)
-    setBulk('')
-    setShowBulk(false)
-    setSelected(0)
-  }
+    if (prose) setSlides(item.id, textToScreens(bulk, 220, "", item.subtitle));
+    else importLyrics(item.id, bulk);
+    setBulk("");
+    setShowBulk(false);
+    setSelected(0);
+  };
 
   return (
     <div className="composer">
       <div className="composer-slides">
         <div className="composer-slides-head">
           <h3>Slides</h3>
-          <button className="btn btn-ghost" onClick={() => addSlide(item.id, selected)}>
+          <button
+            className="btn btn-ghost"
+            onClick={() => addSlide(item.id, selected)}
+          >
             + Add
           </button>
         </div>
         <ul>
           {item.slides.map((sl, i) => (
-            <li key={sl.id} className={i === selected ? 'sel' : ''}>
+            <li key={sl.id} className={i === selected ? "sel" : ""}>
               <button className="slide-pick" onClick={() => setSelected(i)}>
-                <SlideCanvas slide={sl} theme={theme} background={item.background} />
+                <SlideCanvas
+                  slide={sl}
+                  theme={theme}
+                  background={item.background}
+                />
                 <span>{sl.label || `Slide ${i + 1}`}</span>
               </button>
               <span className="slide-pick-actions">
-                <button className="icon-btn" onClick={() => moveSlide(item.id, i, i - 1)} disabled={i === 0}>
+                <button
+                  className="icon-btn"
+                  onClick={() => moveSlide(item.id, i, i - 1)}
+                  disabled={i === 0}
+                >
                   ↑
                 </button>
                 <button
@@ -111,10 +134,13 @@ export default function SlideComposer() {
           <ScriptureLookup
             onCancel={() => setShowLookup(false)}
             onApply={(result, slides) => {
-              setSlides(item.id, slides)
-              updateItem(item.id, { title: result.reference, subtitle: result.translation })
-              setSelected(0)
-              setShowLookup(false)
+              setSlides(item.id, slides);
+              updateItem(item.id, {
+                title: result.reference,
+                subtitle: result.translation,
+              });
+              setSelected(0);
+              setShowLookup(false);
             }}
           />
         )}
@@ -126,7 +152,9 @@ export default function SlideComposer() {
               <input
                 value={slide.label}
                 placeholder="Verse 1, Chorus, …"
-                onChange={(e) => updateSlide(item.id, slide.id, { label: e.target.value })}
+                onChange={(e) =>
+                  updateSlide(item.id, slide.id, { label: e.target.value })
+                }
               />
             </label>
             <label className="field">
@@ -134,18 +162,23 @@ export default function SlideComposer() {
               <textarea
                 rows={6}
                 value={slide.body}
-                onChange={(e) => updateSlide(item.id, slide.id, { body: e.target.value })}
+                onChange={(e) =>
+                  updateSlide(item.id, slide.id, { body: e.target.value })
+                }
               />
             </label>
             {theme.showFooter && (
               <label className="field">
                 <span>Footer</span>
                 <input
-                  value={slide.footer ?? ''}
+                  value={slide.footer ?? ""}
                   placeholder={
-                    [item.title, item.subtitle].filter(Boolean).join(' · ') || 'Reference, credit…'
+                    [item.title, item.subtitle].filter(Boolean).join(" · ") ||
+                    "Reference, credit…"
                   }
-                  onChange={(e) => updateSlide(item.id, slide.id, { footer: e.target.value })}
+                  onChange={(e) =>
+                    updateSlide(item.id, slide.id, { footer: e.target.value })
+                  }
                 />
               </label>
             )}
@@ -154,12 +187,19 @@ export default function SlideComposer() {
 
         <div className="row">
           <button className="btn" onClick={() => setShowBulk((v) => !v)}>
-            {showBulk ? 'Cancel import' : prose ? 'Paste reading…' : 'Paste lyrics…'}
+            {showBulk
+              ? "Cancel import"
+              : prose
+                ? "Paste reading…"
+                : "Paste lyrics…"}
           </button>
           <button className="btn" onClick={() => setShowLookup((v) => !v)}>
-            {showLookup ? 'Close lookup' : 'Look up scripture…'}
+            {showLookup ? "Close lookup" : "Look up scripture…"}
           </button>
-          <button className="btn btn-primary" onClick={() => useLive.getState().goTo(item.id, selected)}>
+          <button
+            className="btn btn-primary"
+            onClick={() => useLive.getState().goTo(item.id, selected)}
+          >
             Go live from here
           </button>
         </div>
@@ -169,15 +209,16 @@ export default function SlideComposer() {
             <p className="muted small">
               {prose ? (
                 <>
-                  Paste the reading from your lectionary or missal. It goes on one screen; only a very long
-                  reading is split, at sentence ends.
+                  Paste the reading from your lectionary or missal. It goes on
+                  one screen; only a very long reading is split, at sentence
+                  ends.
                 </>
               ) : (
                 <>
-                  A blank line starts a new slide. Put <code>[Verse 1]</code> on its own first line to label
-                  one.
+                  A blank line starts a new slide. Put <code>[Verse 1]</code> on
+                  its own first line to label one.
                 </>
-              )}{' '}
+              )}{" "}
               This replaces the existing slides.
             </p>
             <textarea
@@ -185,12 +226,16 @@ export default function SlideComposer() {
               value={bulk}
               placeholder={
                 prose
-                  ? 'A reading from the Book of the Prophet Isaiah…'
-                  : '[Verse 1]\nAmazing grace how sweet the sound\n\n[Chorus]\nMy chains are gone'
+                  ? "A reading from the Book of the Prophet Isaiah…"
+                  : "[Verse 1]\nAmazing grace how sweet the sound\n\n[Chorus]\nMy chains are gone"
               }
               onChange={(e) => setBulk(e.target.value)}
             />
-            <button className="btn btn-primary" onClick={applyBulk} disabled={!bulk.trim()}>
+            <button
+              className="btn btn-primary"
+              onClick={applyBulk}
+              disabled={!bulk.trim()}
+            >
               Replace slides
             </button>
           </div>
@@ -201,7 +246,10 @@ export default function SlideComposer() {
         <h3>Item</h3>
         <label className="field">
           <span>Title</span>
-          <input value={item.title} onChange={(e) => updateItem(item.id, { title: e.target.value })} />
+          <input
+            value={item.title}
+            onChange={(e) => updateItem(item.id, { title: e.target.value })}
+          />
         </label>
         <label className="field">
           <span>Subtitle</span>
@@ -213,7 +261,10 @@ export default function SlideComposer() {
         </label>
         <label className="field">
           <span>Theme</span>
-          <select value={item.themeId} onChange={(e) => updateItem(item.id, { themeId: e.target.value })}>
+          <select
+            value={item.themeId}
+            onChange={(e) => updateItem(item.id, { themeId: e.target.value })}
+          >
             {themes.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name}
@@ -224,35 +275,58 @@ export default function SlideComposer() {
 
         <label className="field">
           <span>
-            Auto-advance{' '}
-            <em className="muted">{item.autoAdvance > 0 ? `every ${item.autoAdvance}s, loops` : 'off'}</em>
+            Auto-advance{" "}
+            <em className="muted">
+              {item.autoAdvance > 0
+                ? `every ${item.autoAdvance}s, loops`
+                : "off"}
+            </em>
           </span>
           <input
             type="number"
             min="0"
             step="1"
             value={item.autoAdvance ?? 0}
-            onChange={(e) => updateItem(item.id, { autoAdvance: Math.max(0, Number(e.target.value) || 0) })}
+            onChange={(e) =>
+              updateItem(item.id, {
+                autoAdvance: Math.max(0, Number(e.target.value) || 0),
+              })
+            }
           />
         </label>
         <p className="muted small hint">
-          For announcements or a pre-service loop. 0 means the operator advances.
+          For announcements or a pre-service loop. 0 means the operator
+          advances.
         </p>
 
-        <button className="btn btn-ghost full" onClick={() => saveToLibrary(item.id)}>
-          {item.libraryId ? '★ Update library copy' : '☆ Save to library'}
+        <button
+          className="btn btn-ghost full"
+          onClick={() => saveToLibrary(item.id)}
+        >
+          {item.libraryId ? "★ Update library copy" : "☆ Save to library"}
         </button>
 
         <h3>Background</h3>
         <div className="row">
-          <button className="btn btn-ghost" onClick={() => updateItem(item.id, { background: null })}>
+          <button
+            className="btn btn-ghost"
+            onClick={() => updateItem(item.id, { background: null })}
+          >
             Use theme
           </button>
           <input
             type="color"
             aria-label="Background colour"
-            value={item.background?.kind === 'color' ? item.background.value : theme.background.value}
-            onChange={(e) => updateItem(item.id, { background: { kind: 'color', value: e.target.value } })}
+            value={
+              item.background?.kind === "color"
+                ? item.background.value
+                : theme.background.value
+            }
+            onChange={(e) =>
+              updateItem(item.id, {
+                background: { kind: "color", value: e.target.value },
+              })
+            }
           />
         </div>
 
@@ -272,18 +346,24 @@ export default function SlideComposer() {
                   background: {
                     kind: m.type,
                     mediaId: m.id,
-                    ...(m.url?.startsWith('blob:') ? {} : { value: m.url }),
+                    ...(m.url?.startsWith("blob:") ? {} : { value: m.url }),
                     dim: 0.35,
                   },
                 })
               }
             >
-              {m.type === 'video' ? <video src={m.url} muted /> : <img src={m.url} alt="" />}
+              {m.type === "video" ? (
+                <video src={m.url} muted />
+              ) : (
+                <img src={m.url} alt="" />
+              )}
             </button>
           ))}
         </div>
         {media.length === 0 && (
-          <p className="muted small">Add images or video in the Media tab to use as backgrounds.</p>
+          <p className="muted small">
+            Add images or video in the Media tab to use as backgrounds.
+          </p>
         )}
 
         <label className="field">
@@ -296,32 +376,34 @@ export default function SlideComposer() {
         </label>
       </div>
     </div>
-  )
+  );
 }
 
 function ScriptureLookup({ onApply, onCancel }) {
-  const [ref, setRef] = useState('')
-  const [translation, setTranslation] = useState(() => readPref('worship-translation', 'dr'))
-  const [perSlide, setPerSlide] = useState(1)
-  const [result, setResult] = useState(null)
-  const [error, setError] = useState('')
-  const [busy, setBusy] = useState(false)
+  const [ref, setRef] = useState("");
+  const [translation, setTranslation] = useState(() =>
+    readPref("worship-lookup-bible", "webbe"),
+  );
+  const [perSlide, setPerSlide] = useState(1);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   const run = async () => {
-    setBusy(true)
-    setError('')
+    setBusy(true);
+    setError("");
     try {
-      setResult(await lookup(ref, translation))
-      writePref('worship-translation', translation)
+      setResult(await lookup(ref, translation));
+      writePref("worship-lookup-bible", translation);
     } catch (err) {
-      setResult(null)
-      setError(err.message)
+      setResult(null);
+      setError(err.message);
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
-  }
+  };
 
-  const slides = result ? versesToSlides(result, { perSlide }) : []
+  const slides = result ? versesToSlides(result, { perSlide }) : [];
 
   return (
     <div className="bulk lookup">
@@ -332,12 +414,12 @@ function ScriptureLookup({ onApply, onCancel }) {
           placeholder="John 3:16-18 · Psalm 23 · Sirach 3:2-6"
           value={ref}
           onChange={(e) => setRef(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && run()}
+          onKeyDown={(e) => e.key === "Enter" && run()}
         />
         <select
           value={translation}
           onChange={(e) => setTranslation(e.target.value)}
-          style={{ width: 'auto' }}
+          style={{ width: "auto" }}
         >
           {TRANSLATIONS.map((t) => (
             <option key={t.id} value={t.id} title={t.name}>
@@ -345,8 +427,12 @@ function ScriptureLookup({ onApply, onCancel }) {
             </option>
           ))}
         </select>
-        <button className="btn btn-primary" onClick={run} disabled={busy || !ref.trim()}>
-          {busy ? 'Looking up…' : 'Look up'}
+        <button
+          className="btn btn-primary"
+          onClick={run}
+          disabled={busy || !ref.trim()}
+        >
+          {busy ? "Looking up…" : "Look up"}
         </button>
       </div>
 
@@ -356,14 +442,15 @@ function ScriptureLookup({ onApply, onCancel }) {
         <>
           <div className="row between lookup-head">
             <strong>
-              {result.reference} <span className="muted">· {result.translation}</span>
+              {result.reference}{" "}
+              <span className="muted">· {result.translation}</span>
             </strong>
             <label className="field inline">
               <span>Verses per slide</span>
               <select
                 value={perSlide}
                 onChange={(e) => setPerSlide(Number(e.target.value))}
-                style={{ width: 'auto' }}
+                style={{ width: "auto" }}
               >
                 {[1, 2, 3, 4].map((n) => (
                   <option key={n}>{n}</option>
@@ -380,33 +467,37 @@ function ScriptureLookup({ onApply, onCancel }) {
             ))}
           </ol>
           <div className="row">
-            <button className="btn btn-primary" onClick={() => onApply(result, slides)}>
-              Use {slides.length} slide{slides.length === 1 ? '' : 's'}
+            <button
+              className="btn btn-primary"
+              onClick={() => onApply(result, slides)}
+            >
+              Use {slides.length} slide{slides.length === 1 ? "" : "s"}
             </button>
             <button className="btn btn-ghost" onClick={onCancel}>
               Cancel
             </button>
             <span className="muted small">
-              Replaces this item's slides. Saved with the service, so it works offline.
+              Replaces this item's slides. Saved with the service, so it works
+              offline.
             </span>
           </div>
         </>
       )}
     </div>
-  )
+  );
 }
 
 function readPref(key, fallback) {
   try {
-    return localStorage.getItem(key) ?? fallback
+    return localStorage.getItem(key) ?? fallback;
   } catch {
-    return fallback
+    return fallback;
   }
 }
 
 function writePref(key, value) {
   try {
-    localStorage.setItem(key, value)
+    localStorage.setItem(key, value);
   } catch {
     /* preference only */
   }

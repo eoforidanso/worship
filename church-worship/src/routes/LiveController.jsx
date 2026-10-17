@@ -228,10 +228,10 @@ function Transport() {
   return (
     <section className="transport">
       <div className="transport-group">
-        <button className="btn btn-lg" onClick={live.prev}>
+        <button className="btn btn-lg transport-prev" onClick={live.prev}>
           ◀ Previous
         </button>
-        <button className="btn btn-lg btn-primary" onClick={live.next}>
+        <button className="btn btn-lg btn-primary transport-next" onClick={live.next}>
           Next ▶
         </button>
       </div>

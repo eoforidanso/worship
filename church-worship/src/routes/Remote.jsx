@@ -25,7 +25,7 @@ export default function Remote() {
   const [draft, setDraft] = useState('')
 
   useEffect(() => {
-    document.title = 'Remote — Church Worship'
+    document.title = 'Remote — Ambo'
     document.body.classList.add('bare')
     const offStatus = subscribeStatus((s) => {
       setConn(s)
@@ -47,7 +47,7 @@ export default function Remote() {
   if (!pin) {
     return (
       <div className="remote">
-        <h1>Church Worship remote</h1>
+        <h1>Ambo remote</h1>
         <p>Enter the 4-digit PIN shown on the laptop (Live → Phone remote).</p>
         <input
           className="remote-pin"

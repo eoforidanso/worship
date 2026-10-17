@@ -54,7 +54,7 @@ export default function Shell() {
   const planId = useContent((s) => s.plan.id)
   const parishName = useContent((s) => s.parish?.name)
   useEffect(() => {
-    document.title = parishName?.trim() ? `${parishName.trim()} — Church Worship` : 'Church Worship'
+    document.title = parishName?.trim() ? `${parishName.trim()} — Ambo` : 'Ambo'
   }, [parishName])
   const setPlanDate = useContent((s) => s.setPlanDate)
 
@@ -62,6 +62,10 @@ export default function Shell() {
   useAutoAdvance()
   useEffect(() => startRemoteControl(), [])
   useEffect(() => startHistory(), [])
+  // On a phone the tabs scroll sideways: keep the current one in view.
+  useEffect(() => {
+    document.querySelector('.tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [pathname])
   useLiturgicalColour()
   const status = useConnectionStatus()
 
@@ -78,7 +82,7 @@ export default function Shell() {
           >
             ☰
           </button>
-          <span className="brand-mark" aria-hidden="true" />
+          <img className="brand-mark" src={`${import.meta.env.BASE_URL}icon-192.png`} alt="Ambo" title="Ambo" />
           <input
             className="plan-title"
             value={planTitle}
@@ -198,11 +202,11 @@ function InstallButton() {
         title="Install as an app on this computer"
         onClick={() => (canInstall ? promptInstall() : setHelp((v) => !v))}
       >
-        ⤓ Install app
+        ⤓<span className="wide-label"> Install app</span>
       </button>
       {help && (
         <span className="install-help" role="dialog">
-          <strong>Install Church Worship</strong>
+          <strong>Install Ambo</strong>
           <span>{installHelp()}</span>
           <span className="muted small">
             Installed, it opens in its own window from the dock or Start menu, straight onto Live, and runs

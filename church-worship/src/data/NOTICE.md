@@ -37,5 +37,13 @@ Regenerate or extend with `node scripts/fetch-calendar.mjs 2041 2050`.
 
 ## Scripture text
 
-Not stored here. Fetched at prep time from the public-domain Douay-Rheims
-Bible via api.getbible.net and saved into the service.
+- **`bible-web/`** — the **World English Bible, British Edition**, with the
+  Deuterocanon, from eBible.org (<https://ebible.org/find/details.php?id=eng-webbe>,
+  `eng-webbe_vpl.zip`). Public domain. "World English Bible" is a trademark
+  of eBible.org. The text is unchanged; `scripts/build-webbe.py` renumbers it
+  to the Lectionary's Hebrew verse numbers, removes the psalm headings run
+  into verse 1, takes Daniel from *Daniel (Greek)*, stores Esther's addition C
+  (Greek Esther 4:18–47) as chapter `C`, and puts Romans' doxology at 16:25–27.
+- **`bible/`** — the **Douay-Rheims** Bible, public domain, from
+  api.getbible.net (`scripts/fetch-bible.mjs`), in its own (Vulgate)
+  numbering.

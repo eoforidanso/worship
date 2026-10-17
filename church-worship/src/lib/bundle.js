@@ -69,7 +69,7 @@ export async function exportBundle(scope = 'service') {
 
   const name =
     scope === 'all'
-      ? `worship-backup-${today()}.worship.json`
+      ? `ambo-backup-${today()}.worship.json`
       : `${slug(s.plan.title)}-${s.plan.date || today()}.worship.json`
   download(new Blob([JSON.stringify(bundle)], { type: 'application/json' }), name)
   if (scope === 'all') useContent.getState().markBackedUp()
@@ -79,7 +79,7 @@ export async function exportBundle(scope = 'service') {
 /** Read a bundle file and merge it into this machine. */
 export async function importBundle(file) {
   const bundle = JSON.parse(await file.text())
-  if (bundle?.format !== FORMAT) throw new Error('This is not a Church Worship service file.')
+  if (bundle?.format !== FORMAT) throw new Error('This is not an Ambo service file.')
 
   // Bytes first, so nothing in the merged plan points at media that isn't here.
   const have = await storedIds().catch(() => new Set())
