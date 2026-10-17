@@ -10,6 +10,10 @@
   --danger: #f0616d;
   --live: #3ecf8e;
   --radius: 8px;
+  /* The liturgical gold of the sign and the open tab: it means "live" or "the main action". */
+  --gold: #e2c46e;
+  --gold-deep: #c99a3c;
+  --gold-glow: rgba(232, 178, 92, 0.22);
   color-scheme: dark;
 }
 
@@ -548,12 +552,30 @@ input[type='range'] {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 16px;
-  font-size: 13px;
+  padding: 5px 16px;
+  font-size: 12.5px;
   color: var(--muted);
-  background: var(--bg-2);
-  border-bottom: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.015);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
+}
+.notice .btn {
+  padding: 4px 10px;
+  font-size: 12.5px;
+}
+.notice .btn-quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+.notice .btn-quiet:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+}
+.notice .btn-soft {
+  background: rgba(76, 141, 255, 0.12);
+  border-color: rgba(76, 141, 255, 0.35);
+  color: #cfe0ff;
 }
 .notice {
   flex-wrap: wrap;
@@ -805,9 +827,28 @@ input[type='range'] {
   border-radius: var(--radius);
   padding: 2px 4px;
 }
+/* Live: the room is seeing this. A full gold edge, warm light, a LIVE tag. */
 .plan-row.on-air {
-  border-color: var(--live);
-  box-shadow: inset 3px 0 0 var(--live);
+  position: relative;
+  border-color: rgba(226, 196, 110, 0.6);
+  background: linear-gradient(90deg, rgba(232, 178, 92, 0.13), rgba(232, 178, 92, 0.03) 65%), var(--bg-3);
+  box-shadow:
+    inset 3px 0 0 var(--gold),
+    0 0 16px rgba(232, 178, 92, 0.16);
+}
+.plan-row.on-air::after {
+  content: 'LIVE';
+  position: absolute;
+  top: -8px;
+  right: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font: 700 9.5px/1.4 system-ui, sans-serif;
+  letter-spacing: 0.08em;
+  color: #1d1505;
+  background: linear-gradient(180deg, #f4dc94, #d6ac4a);
+  box-shadow: 0 0 8px rgba(232, 178, 92, 0.5);
+  pointer-events: none;
 }
 .plan-row.dragging {
   opacity: 0.5;
@@ -836,7 +877,7 @@ input[type='range'] {
   border: 0;
   color: inherit;
   cursor: pointer;
-  padding: 5px 2px;
+  padding: 7px 2px; /* +4 px a row: easier to scan during Mass */
   text-align: left;
   font: inherit;
 }
@@ -862,6 +903,7 @@ input[type='range'] {
   white-space: nowrap;
 }
 .plan-sub {
+  margin-top: 1px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -938,9 +980,186 @@ input[type='range'] {
   color: var(--muted);
   margin-bottom: 6px;
 }
+/* The previews stand like a stage: raised a little, a deep shadow beneath,
+   a warm edge of light. What the congregation sees now is lit by the gold. */
+.preview-live,
+.composer-preview {
+  border-radius: 6px;
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 0 0 5px rgba(255, 255, 255, 0.03),
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 18px 40px -8px rgba(0, 0, 0, 0.6),
+    0 0 40px rgba(232, 178, 92, 0.1);
+}
 .preview-live {
-  outline: 2px solid var(--live);
-  outline-offset: 2px;
+  outline: 1px solid rgba(226, 196, 110, 0.7);
+  outline-offset: 3px;
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.05),
+    0 0 0 5px rgba(255, 255, 255, 0.1),
+    0 2px 4px rgba(0, 0, 0, 0.35),
+    0 18px 40px -8px rgba(0, 0, 0, 0.6),
+    0 0 44px rgba(232, 178, 92, 0.24);
+}
+/* The "Live" caption: a small gold light, on air. */
+.live-previews figure:first-child figcaption::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  margin-right: 7px;
+  border-radius: 50%;
+  background: var(--gold);
+  box-shadow: 0 0 8px var(--gold);
+  animation: candle 9s ease-in-out infinite;
+}
+.live-previews figure:first-child figcaption {
+  color: var(--gold);
+}
+
+/* Output: Off (grey) · Ready (blue) · Live (gold, slowly pulsing). The
+   operator must never wonder what the room is seeing. */
+.output-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 600;
+}
+.output-light {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.output-state {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.output-btn.output-off {
+  color: #c4ccd6;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.output-off .output-light {
+  background: #5b6675;
+}
+.output-off .output-state {
+  background: rgba(255, 255, 255, 0.06);
+  color: #9aa6b4;
+}
+.output-btn.output-ready {
+  color: #fff;
+  background: linear-gradient(180deg, #5d9bff 0%, #3c7ce6 100%);
+  border-color: rgba(170, 200, 255, 0.6);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 2px 8px rgba(0, 0, 0, 0.35),
+    0 0 14px rgba(76, 141, 255, 0.3);
+}
+.output-ready .output-light {
+  background: #dce8ff;
+  box-shadow: 0 0 6px #dce8ff;
+}
+.output-ready .output-state {
+  background: rgba(0, 20, 60, 0.3);
+}
+.output-btn.output-live {
+  color: #1d1505;
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.45);
+  background: linear-gradient(180deg, #f4dc94 0%, #e2c46e 45%, #c99a3c 100%);
+  border-color: rgba(255, 232, 170, 0.75);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 230, 0.75),
+    inset 0 -2px 0 rgba(120, 80, 20, 0.35),
+    0 3px 8px rgba(0, 0, 0, 0.35),
+    0 0 20px rgba(232, 178, 92, 0.35);
+  animation: on-air 2.8s ease-in-out infinite;
+}
+.output-live .output-light {
+  background: #b3261e;
+  box-shadow: 0 0 6px rgba(255, 80, 60, 0.9);
+}
+.output-live .output-state {
+  background: rgba(60, 35, 0, 0.18);
+}
+@keyframes on-air {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 250, 230, 0.75),
+      inset 0 -2px 0 rgba(120, 80, 20, 0.35),
+      0 3px 8px rgba(0, 0, 0, 0.35),
+      0 0 14px rgba(232, 178, 92, 0.25);
+  }
+  50% {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 250, 230, 0.75),
+      inset 0 -2px 0 rgba(120, 80, 20, 0.35),
+      0 3px 8px rgba(0, 0, 0, 0.35),
+      0 0 28px rgba(232, 178, 92, 0.5);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .output-btn.output-live {
+    animation: none;
+  }
+}
+
+/* Glass buttons. `.btn-glass`: a pane of frosted glass. `.btn-gold`: the
+   one main action on a screen — warm gold glass with a lit top edge. */
+.btn-glass {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  border-color: rgba(255, 255, 255, 0.14);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.25),
+    0 2px 6px rgba(0, 0, 0, 0.3);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  backdrop-filter: blur(10px) saturate(150%);
+}
+.btn-glass:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.17), rgba(255, 255, 255, 0.06));
+}
+.btn.btn-gold {
+  color: #1d1505;
+  font-weight: 600;
+  text-shadow: 0 1px 0 rgba(255, 240, 200, 0.45);
+  background: linear-gradient(180deg, #f4dc94 0%, #e2c46e 45%, #c99a3c 100%);
+  border-color: rgba(255, 232, 170, 0.7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 230, 0.75),
+    inset 0 -2px 0 rgba(120, 80, 20, 0.35),
+    0 3px 8px rgba(0, 0, 0, 0.35),
+    0 0 18px var(--gold-glow);
+  transition:
+    filter 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.15s ease;
+}
+.btn.btn-gold:hover:not(:disabled) {
+  background: linear-gradient(180deg, #f8e3a4 0%, #e8cb78 45%, #d1a446 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 250, 230, 0.8),
+    inset 0 -2px 0 rgba(120, 80, 20, 0.35),
+    0 4px 12px rgba(0, 0, 0, 0.35),
+    0 0 26px rgba(232, 178, 92, 0.32);
+}
+.btn.btn-gold:active:not(:disabled) {
+  transform: translateY(1px);
+}
+.btn.btn-gold:disabled {
+  opacity: 0.6;
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-previews figure:first-child figcaption::before {
+    animation: none;
+  }
 }
 
 .transport {
@@ -994,7 +1213,8 @@ input[type='range'] {
   border-color: var(--line);
 }
 .thumb.current {
-  border-color: var(--live);
+  border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(232, 178, 92, 0.3);
 }
 .thumb-label {
   display: block;
@@ -1405,9 +1625,22 @@ input[type='range'] {
   outline: 2px dashed var(--accent);
   outline-offset: -2px;
 }
+/* Selected (cued, not yet on screen): a thin gold leading edge and the
+   softest light — the same gold as the tabs, quieter than LIVE. */
 .plan-row.cued {
-  border-color: var(--accent);
-  box-shadow: inset 3px 0 0 var(--accent);
+  border-color: rgba(226, 196, 110, 0.32);
+  background: linear-gradient(90deg, rgba(232, 178, 92, 0.07), transparent 55%), var(--bg-3);
+  box-shadow: inset 2px 0 0 rgba(226, 196, 110, 0.85);
+}
+.plan-row.cued.on-air {
+  box-shadow:
+    inset 3px 0 0 var(--gold),
+    0 0 16px rgba(232, 178, 92, 0.16);
+}
+.plan-row-main:focus-visible {
+  outline: 1px solid rgba(226, 196, 110, 0.7);
+  outline-offset: -1px;
+  border-radius: 6px;
 }
 .icon-btn.live-btn:hover {
   color: var(--live);

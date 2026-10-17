@@ -571,7 +571,7 @@ function OneClickMass({ onDone, onCustomise }) {
   }
   return (
     <div className="planner-empty">
-      <button className="btn btn-primary full" onClick={build} disabled={!!progress || !date}>
+      <button className="btn btn-gold full" onClick={build} disabled={!!progress || !date}>
         {progress ? 'Building the Mass…' : '✠ Build this day’s Mass'}
       </button>
       <p className="muted small">

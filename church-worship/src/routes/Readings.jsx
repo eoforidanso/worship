@@ -859,7 +859,7 @@ function Day({ day, ritual }) {
       {option && (
         <div className="action-bar">
           <button
-            className="btn btn-primary btn-xl"
+            className="btn btn-gold btn-xl"
             onClick={build}
             disabled={!!progress || !included.length}
           >
