@@ -43,6 +43,24 @@ button in the top bar, drag it to the projector, double-click for fullscreen.
 
 ## Planning a Mass
 
+**Everything is built in.** The calendar, the whole Lectionary, the prayers
+of the Mass, the starter hymnal *and the entire Douay-Rheims Bible* (all 73
+books, 35,805 verses) ship inside the app. A Mass builds in well under a
+second on a laptop with no internet at all. `scripts/fetch-bible.mjs`
+regenerates the Bible files.
+
+**Templates.** Under the one-click button, *Other services…* builds a
+**Saturday Vigil** (Sunday's readings, dated the Saturday), a **Weekday
+Mass**, a **School Mass**, or the **next Holy Day**. **Funeral Mass** and
+**Wedding Mass** open the Readings page with the rite's own readings from the
+Lectionary — choose each with the family from the list in its row (the first
+is the usual default) — and a box for the name of the deceased or the
+couple, which goes on the title slide. The rite's moments go in as title
+slides: for a funeral the *Final Commendation* and a *Song of Farewell* place
+in place of the dismissal; for a wedding *The Celebration of Matrimony* after
+the Gospel and the *Nuptial Blessing* before the Sign of Peace. Funerals have
+no Gloria; weddings do; neither has the Creed (change any under Options).
+
 **One click.** On an empty service, *✠ Build this day's Mass* adds
 everything at once: the readings, the Order of Mass (Gloria and Creed as
 the day requires), hymns suggested from the library for each place, and
@@ -81,6 +99,38 @@ readings and hymns first →* opens the Readings page instead.
   `Psalm 23:1-3a, 3b-4, 5, 6 | The Lord is my shepherd…` and they fill in
   when those days are opened. The app never invents a response — the wording
   is your lectionary's.
+
+**Reading cards** show how long each reading takes at a lector's pace, and
+the *names to practise* — the unusual proper names in it (Nabuchodonosor,
+Melchisedech, Ephrata…), so the lector can rehearse them.
+
+**Drag into the plan.** Drag a song from the library (Services tab) or a
+reading from the Readings page onto the service plan: a blue line shows where
+it will land; dropped on an empty hymn place, it fills it.
+
+**Preview beside the plan.** On the Prayers, Announcements, Services, Media
+and Themes tabs, a panel on the right shows the selected item exactly as the
+projector will draw it — ◀ ▶ through its slides, *Go live* — or what's on
+screen now. *Preview ◂* reopens it when hidden.
+
+**Timeline.** *List / Timeline* in the plan header. The timeline gives every
+part its start time and length — readings at a lector's pace, prayers said
+together, hymns by their verses — with the unprojected parts in between
+(Collect, Homily, Preface, Eucharistic Prayer, Communion). Set the start
+time and the homily's length; the total and the end time show at the top.
+
+**Undo, redo, history.** ⌘Z / Ctrl+Z undoes any change to the plan, ⇧⌘Z /
+Ctrl+Y redoes; ↶ ↷ in the plan header do the same. Before every big change
+(building a Mass, clearing, adding notices, opening another service,
+restoring) a snapshot is kept, and one when the app opens; 🕘 lists the
+last 25 and restores any of them, keeping a copy of what was there.
+
+**Keyboard.** Press **?** anywhere for the full list. On Readings: `N` / `P`
+next or previous Sunday, `]` / `[` a day, `T` today, `J` / `K` step the
+preview through the readings, `F` or `/` find a feast, `A` add the Mass.
+Anywhere: `S` find a song. On Live only: `Enter` puts the selected item on
+screen and `Esc` resets it — on the planning tabs those keys do nothing to
+the projector.
 
 **Is it ready?** The service plan shows *Ready 24 of 27* with a bar, a ✓ or
 ⚠ on every row (hover for what's missing), and a count per part of the Mass
@@ -421,6 +471,7 @@ Three things to know:
 | `Enter` | Take the cued item live from its first slide |
 | `←` `↑` `PgUp` | Previous slide |
 | `B` | Blackout |
+| `?` | All shortcuts |
 | `C` | Clear text, keep the background |
 | `L` | Show the logo |
 | `Esc` | Reset live state |
@@ -454,6 +505,12 @@ scripts/               build-lectionary.py, fetch-calendar.mjs — regenerate da
   lib/hymnSuggest.js   hymn suggestions per place, by season and feast
   lib/readiness.js     what each plan item still needs
   lib/responses.js     psalm responses: remembered, and imported by the year
+  lib/history.js       undo / redo and snapshots (IndexedDB)
+  lib/timing.js        part lengths, the timeline, names to practise
+  lib/dragTypes.js     dragging songs and readings into the plan
+  components/PreviewDock.jsx  the projector preview beside the planning tabs
+  data/bible/          the Douay-Rheims, one file per book
+  data/ritual.js       Funeral and Wedding readings and their rites
   components/SafeBoundary.jsx  black-not-error on the projector; recovery card elsewhere
   data/hymns.js        the starter hymnal (public-domain texts)
   routes/              Shell, LiveController, SlideComposer, MediaBrowser,
@@ -576,6 +633,17 @@ panel starts closed and ☰ opens it, swiping changes day, the preview opens in
 the reading row, and the action bar stays on screen. Hymn suggestions checked
 across Ordinary Time, Advent, Christmas, Lent, Easter, Pentecost and the
 Assumption.
+
+Workstation features, in a production build in clean Chrome with the network
+switched off before anything was built: one-click Mass (27 items, Gospel text
+from the built-in Bible, 0.2 s); timeline from 09:00 ending ≈ 09:51 with the
+Collect, Homily, Preface, Eucharistic Prayer and Communion gaps; Clear then
+⌘Z restoring all 27 items, with the snapshot listed; the preview panel
+following the selection; a library song dragged in above the Gospel;
+Funeral (name on the title slide, Final Commendation and Song of Farewell,
+no Blessing, no Gloria, no Creed) and Wedding (Celebration of Matrimony after
+the Gospel, Nuptial Blessing before the Sign of Peace, Gloria, no Creed);
+`N` and `?`; no page errors.
 
 Not yet exercised: the WebSocket relay across two machines, the theme
 editor, and importing a bundle with a large video.

@@ -10,6 +10,10 @@ import { urlFor } from '../lib/mediaStore'
 import { ORDER, SECTIONS } from '../data/orderOfMass'
 import { filesToItems, textToItem } from '../lib/importer'
 import { readiness } from '../lib/readiness'
+import { useHistory, undo, redo, restoreSnapshot } from '../lib/history'
+import { DRAG_SONG, DRAG_READING, buildDroppedReading } from '../lib/dragTypes'
+import { TEMPLATES } from '../lib/autoMass'
+import { timeline, clock, fmtDuration } from '../lib/timing'
 
 const TYPE_META = {
   song: { icon: '♪', label: 'Song' },
@@ -35,6 +39,42 @@ export default function ServicePlanner({ onEdit }) {
   const addItem = useContent((s) => s.addItem)
   const clearPlan = useContent((s) => s.clearPlan)
   const insertItems = useContent((s) => s.insertItems)
+  const insertItemsAt = useContent((s) => s.insertItemsAt)
+  const addFromLibrary = useContent((s) => s.addFromLibrary)
+  const [dropAt, setDropAt] = useState(null) // { id, before } while dragging over the plan
+
+  // List or Timeline: the timeline shows when each part starts and how long it takes.
+  const [view, setView] = useState(() => readPref('worship-plan-view', 'list'))
+  const [startAt, setStartAt] = useState(() => readPref('worship-mass-start', ''))
+  const [homily, setHomily] = useState(() => Number(readPref('worship-homily', 10)))
+  const times = useMemo(() => {
+    if (view !== 'timeline') return null
+    const t = timeline(items, { homilyMinutes: homily })
+    const byId = new Map()
+    const gapsAfter = new Map()
+    let last = null
+    for (const row of t.rows) {
+      if (row.item) {
+        byId.set(row.item.id, row)
+        last = row.item.id
+      } else if (last) gapsAfter.set(last, row)
+    }
+    return { ...t, byId, gapsAfter }
+  }, [view, items, homily])
+
+  /** The row under the pointer, and whether the drop lands above or below it. */
+  const dropTarget = (y) => {
+    const rows = [...document.querySelectorAll('.plan-row[data-id]')]
+    if (!rows.length) return null
+    for (const row of rows) {
+      const r = row.getBoundingClientRect()
+      if (y < r.bottom) {
+        const placeholder = row.classList.contains('placeholder')
+        return { id: row.dataset.id, before: !placeholder && y < r.top + r.height / 2, fill: placeholder }
+      }
+    }
+    return { id: rows.at(-1).dataset.id, before: false }
+  }
   const ready = useMemo(() => readiness(items), [items])
   const [importing, setImporting] = useState(false)
   const [dropping, setDropping] = useState(false)
@@ -88,17 +128,42 @@ export default function ServicePlanner({ onEdit }) {
     <div
       className={`planner${dropping ? ' dropping' : ''}`}
       onDragOver={(e) => {
-        if (![...e.dataTransfer.types].includes('Files')) return
+        const types = [...e.dataTransfer.types]
+        const ours = types.includes(DRAG_SONG) || types.includes(DRAG_READING)
+        if (!ours && !types.includes('Files')) return
         e.preventDefault()
         setDropping(true)
+        setDropAt(ours ? dropTarget(e.clientY) : null)
       }}
       onDragLeave={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget)) setDropping(false)
+        if (!e.currentTarget.contains(e.relatedTarget)) {
+          setDropping(false)
+          setDropAt(null)
+        }
       }}
-      onDrop={(e) => {
+      onDrop={async (e) => {
+        setDropping(false)
+        const target = dropTarget(e.clientY)
+        setDropAt(null)
+        const song = e.dataTransfer.getData(DRAG_SONG)
+        const reading = e.dataTransfer.getData(DRAG_READING)
+        if (song || reading) e.preventDefault()
+        if (song) {
+          // Dropped on a hymn place: fills it. Anywhere else: goes in there.
+          const id = addFromLibrary(song, target?.id ?? null, target?.before)
+          if (id) cue(id)
+          return
+        }
+        if (reading) {
+          const made = await buildDroppedReading(JSON.parse(reading))
+          if (made.length) {
+            insertItemsAt(made, target?.id ?? null, target?.before)
+            cue(made[0].id)
+          }
+          return
+        }
         if (!e.dataTransfer.files.length) return
         e.preventDefault()
-        setDropping(false)
         setImporting(true) // the panel opens and reports progress
         setDropped([...e.dataTransfer.files])
       }}
@@ -107,6 +172,22 @@ export default function ServicePlanner({ onEdit }) {
         <h2>Service plan</h2>
         <span className="row">
           <span className="muted">{items.length} items</span>
+          <HistoryButtons />
+          <span className="segmented layout plan-view">
+            {['list', 'timeline'].map((v) => (
+              <button
+                key={v}
+                className={view === v ? 'on' : ''}
+                onClick={() => {
+                  setView(v)
+                  writePref('worship-plan-view', v)
+                }}
+                title={v === 'timeline' ? 'When each part starts, and how long it takes' : 'The plan'}
+              >
+                {v === 'list' ? 'List' : 'Timeline'}
+              </button>
+            ))}
+          </span>
           {items.length > 0 && (
             <button
               className="icon-btn"
@@ -155,6 +236,41 @@ export default function ServicePlanner({ onEdit }) {
         <OneClickMass onDone={(id) => id && cue(id)} onCustomise={() => navigate('/readings')} />
       )}
 
+      {times && items.length > 0 && (
+        <div className="timeline-bar">
+          <label className="field inline">
+            <span>Starts</span>
+            <input
+              type="time"
+              value={startAt}
+              onChange={(e) => {
+                setStartAt(e.target.value)
+                writePref('worship-mass-start', e.target.value)
+              }}
+            />
+          </label>
+          <label className="field inline">
+            <span>Homily</span>
+            <input
+              type="number"
+              min="0"
+              max="60"
+              value={homily}
+              onChange={(e) => {
+                const v = Math.max(0, Number(e.target.value) || 0)
+                setHomily(v)
+                writePref('worship-homily', v)
+              }}
+            />
+            <span>min</span>
+          </label>
+          <strong className="timeline-total">
+            ≈ {fmtDuration(times.total)}
+            {startAt ? ` · ends ${clock(startAt, times.total)}` : ''}
+          </strong>
+        </div>
+      )}
+
       <DndContext
         sensors={sensors}
         collisionDetection={closestCenter}
@@ -184,13 +300,37 @@ export default function ServicePlanner({ onEdit }) {
                   )}
                   <PlanRow
                     item={item}
+                    dropMark={
+                      dropAt?.id === item.id
+                        ? dropAt.fill
+                          ? 'fill'
+                          : dropAt.before
+                            ? 'before'
+                            : 'after'
+                        : ''
+                    }
                     issues={ready.items.get(item.id) ?? []}
+                    time={
+                      times?.byId.get(item.id) && {
+                        at: clock(startAt, times.byId.get(item.id).start),
+                        length: times.byId.get(item.id).seconds
+                          ? fmtDuration(times.byId.get(item.id).seconds)
+                          : '',
+                      }
+                    }
                     live={item.id === liveItemId}
                     cued={item.id === cuedId && item.id !== liveItemId}
                     onPick={() => pick(item.id)}
                     onGoLive={() => goTo(item.id, 0)}
                     onEdit={() => onEdit?.(item.id)}
                   />
+                  {times?.gapsAfter.get(item.id) && (
+                    <li className="plan-gap" aria-hidden="true">
+                      <span>{clock(startAt, times.gapsAfter.get(item.id).start)}</span>
+                      <span>{times.gapsAfter.get(item.id).gap}</span>
+                      <span>{fmtDuration(times.gapsAfter.get(item.id).seconds)}</span>
+                    </li>
+                  )}
                 </Fragment>
               )
             })}
@@ -326,6 +466,71 @@ function ImportPanel({ onFiles, onText, onClose, incoming, onTaken }) {
   )
 }
 
+/** ↶ ↷ and the list of snapshots — nothing done to the plan is permanent. */
+function HistoryButtons() {
+  const { canUndo, canRedo, snapshots } = useHistory()
+  const [open, setOpen] = useState(false)
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform)
+  return (
+    <span className="history">
+      <button
+        className="icon-btn"
+        disabled={!canUndo}
+        onClick={undo}
+        title={`Undo (${mac ? '⌘Z' : 'Ctrl+Z'})`}
+      >
+        ↶
+      </button>
+      <button
+        className="icon-btn"
+        disabled={!canRedo}
+        onClick={redo}
+        title={`Redo (${mac ? '⇧⌘Z' : 'Ctrl+Y'})`}
+      >
+        ↷
+      </button>
+      <button className={`icon-btn${open ? ' on' : ''}`} onClick={() => setOpen((v) => !v)} title="History">
+        🕘
+      </button>
+      {open && (
+        <span className="history-pop" role="dialog">
+          <strong>Snapshots</strong>
+          <span className="muted small">
+            Taken before each big change. Restoring keeps a copy of what’s here now.
+          </span>
+          {snapshots.length === 0 && <span className="muted small">None yet.</span>}
+          <ol>
+            {snapshots.map((s) => (
+              <li key={s.at}>
+                <span className="plan-text">
+                  <span className="plan-title-text">{s.label}</span>
+                  <span className="muted small">
+                    {new Date(s.at).toLocaleString([], {
+                      weekday: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}{' '}
+                    · {s.title} · {s.count} items
+                  </span>
+                </span>
+                <button
+                  className="btn btn-sm"
+                  onClick={() => {
+                    restoreSnapshot(s.at)
+                    setOpen(false)
+                  }}
+                >
+                  Restore
+                </button>
+              </li>
+            ))}
+          </ol>
+        </span>
+      )}
+    </span>
+  )
+}
+
 /**
  * An empty service: build the whole Mass for its date in one press — the
  * readings, the prayers, suggested hymns and this week's notices — or go and
@@ -348,6 +553,22 @@ function OneClickMass({ onDone, onCustomise }) {
       setProgress(null)
     }
   }
+  const navigate = useNavigate()
+  const template = async (kind) => {
+    if (!kind) return
+    setError('')
+    setProgress('Starting…')
+    try {
+      const { buildTemplate } = await import('../lib/autoMass')
+      const out = await buildTemplate(kind, date, { onProgress: (_, label) => setProgress(label) })
+      if (out.open) navigate(out.open)
+      else onDone(out.items.find((it) => it.type === 'scripture')?.id ?? out.items[0]?.id)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setProgress(null)
+    }
+  }
   return (
     <div className="planner-empty">
       <button className="btn btn-primary full" onClick={build} disabled={!!progress || !date}>
@@ -358,9 +579,25 @@ function OneClickMass({ onDone, onCustomise }) {
           error ||
           'Readings, the Order of Mass, suggested hymns and this week’s notices — everything stays editable.'}
       </p>
-      <button className="btn btn-ghost btn-sm" onClick={onCustomise}>
-        Choose readings and hymns first →
-      </button>
+      <div className="row">
+        <select
+          className="template-pick"
+          value=""
+          disabled={!!progress}
+          aria-label="Other services"
+          onChange={(e) => template(e.target.value)}
+        >
+          <option value="">Other services…</option>
+          {TEMPLATES.map(([id, label]) => (
+            <option key={id} value={id}>
+              {label}
+            </option>
+          ))}
+        </select>
+        <button className="btn btn-ghost btn-sm" onClick={onCustomise}>
+          Choose readings first →
+        </button>
+      </div>
     </div>
   )
 }
@@ -425,7 +662,7 @@ function LibraryQuickAdd({ afterId, onAdded }) {
   )
 }
 
-function PlanRow({ item, live, cued, onPick, onGoLive, onEdit, issues = [] }) {
+function PlanRow({ item, live, cued, onPick, onGoLive, onEdit, issues = [], dropMark = '', time = null }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: item.id,
   })
@@ -449,16 +686,23 @@ function PlanRow({ item, live, cued, onPick, onGoLive, onEdit, issues = [] }) {
     <li
       ref={ref}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`plan-row${live ? ' on-air' : ''}${cued ? ' cued' : ''}${isDragging ? ' dragging' : ''}${item.placeholder ? ' placeholder' : ''}`}
+      data-id={item.id}
+      className={`plan-row${live ? ' on-air' : ''}${cued ? ' cued' : ''}${isDragging ? ' dragging' : ''}${item.placeholder ? ' placeholder' : ''}${dropMark ? ` drop-${dropMark}` : ''}`}
     >
       <button className="grip" {...attributes} {...listeners} aria-label={`Reorder ${item.title}`}>
         ⠿
       </button>
 
       <button className="plan-row-main" onDoubleClick={onEdit} onClick={onPick}>
-        <span className="plan-icon" aria-hidden="true">
-          {meta.icon}
-        </span>
+        {time ? (
+          <span className="plan-time" title={time.length ? `about ${time.length}` : ''}>
+            {time.at}
+          </span>
+        ) : (
+          <span className="plan-icon" aria-hidden="true">
+            {meta.icon}
+          </span>
+        )}
         <span className="plan-text">
           <span className="plan-title-text">
             {item.title}
@@ -469,7 +713,11 @@ function PlanRow({ item, live, cued, onPick, onGoLive, onEdit, issues = [] }) {
               ? 'Select, then add a song from the library'
               : [
                   item.lectionary && ORDER.some((p) => p.id === item.lectionary.part) ? '' : item.subtitle,
-                  item.slides.length > 1 ? `${item.slides.length} slides` : '',
+                  time?.length
+                    ? `≈ ${time.length}`
+                    : item.slides.length > 1
+                      ? `${item.slides.length} slides`
+                      : '',
                   item.autoAdvance > 0 ? `loops ${item.autoAdvance}s` : '',
                 ]
                   .filter(Boolean)
@@ -541,4 +789,20 @@ function ItemOfflineDot({ item }) {
     return <span className="dot dot-missing" title="Background unavailable offline" />
   }
   return null
+}
+
+function readPref(key, fallback) {
+  try {
+    return localStorage.getItem(key) ?? fallback
+  } catch {
+    return fallback
+  }
+}
+
+function writePref(key, value) {
+  try {
+    localStorage.setItem(key, String(value))
+  } catch {
+    /* preference only */
+  }
 }

@@ -15,6 +15,64 @@ import { uid } from './id'
 import { ORDER, SECTIONS, belongs, builtInText } from '../data/orderOfMass'
 import { buildMass, balance } from './massBuilder'
 import { parseCitation } from './bible'
+import { RITUALS } from '../data/ritual'
+
+/**
+ * A rite's own shape: drop what it replaces, add its moments as title slides
+ * (Final Commendation, Celebration of Matrimony…) and its extra hymn places,
+ * and name the person or couple on the title slide.
+ */
+function applyRite(items, kind, who, group) {
+  const rite = RITUALS[kind]
+  if (!rite) return items
+  const key = (it) => it.lectionary?.slot ?? it.lectionary?.part ?? it.title
+  let out = items.filter((it) => !rite.drop.includes(key(it)))
+  for (const ex of rite.extras) {
+    const item = ex.hymn
+      ? {
+          id: uid('it'),
+          type: 'song',
+          title: ex.title,
+          subtitle: 'Choose a song',
+          themeId: 'theme_default',
+          background: null,
+          slides: [slide(ex.title, '')],
+          notes: 'Select this item, then add a song from the library — it takes this place.',
+          autoAdvance: 0,
+          placeholder: true,
+          lectionary: { group, slot: `hymn-${ex.title.toLowerCase().replace(/\W+/g, '-')}` },
+        }
+      : {
+          id: uid('it'),
+          type: 'text',
+          title: ex.title,
+          subtitle: rite.title,
+          themeId: 'theme_default',
+          background: null,
+          slides: [slide(ex.title, ex.body)],
+          notes: '',
+          autoAdvance: 0,
+          lectionary: { group, part: `rite-${ex.title.toLowerCase().replace(/\W+/g, '-')}` },
+        }
+    const anchor = ex.after ?? ex.before
+    const at = out.findIndex((it) => key(it) === anchor || it.title === anchor)
+    const pos = at === -1 ? out.length : ex.after ? at + 1 : at
+    out = [...out.slice(0, pos), item, ...out.slice(pos)]
+  }
+  // "Funeral Mass / For Kwame Mensah" on the title slide.
+  if (who?.trim()) {
+    out = out.map((it) =>
+      it.lectionary?.part === 'title'
+        ? {
+            ...it,
+            title: `${rite.title} — ${who.trim()}`,
+            slides: it.slides.map((sl) => ({ ...sl, body: `${sl.body}\n${who.trim()}` })),
+          }
+        : it,
+    )
+  }
+  return out
+}
 
 /** The text a parish will see for one prayer, honouring its choices. */
 export function prayerText(part, prefs = {}, choice) {
@@ -115,5 +173,9 @@ export async function buildWholeMass(option, parts, selections, opts) {
     items.push(prayerItem(part))
   }
 
-  return { items, warnings: readings.warnings, group }
+  return {
+    items: opts.ritual ? applyRite(items, opts.ritual, opts.ritualWho, group) : items,
+    warnings: readings.warnings,
+    group,
+  }
 }

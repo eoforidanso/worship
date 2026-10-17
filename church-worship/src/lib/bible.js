@@ -6,8 +6,9 @@
  * the one free English Catholic Bible with every deuterocanonical book
  * (Sirach, Wisdom, Baruch, Tobit, Judith, Maccabees) that the readings use.
  *
- * Text comes from api.getbible.net at prep time and is then saved into the
- * service as ordinary slides, so the Mass itself runs offline.
+ * The whole text is built into the app (src/data/bible, from api.getbible.net
+ * via scripts/fetch-bible.mjs), so readings come up instantly with no
+ * internet at all; the API is only a fallback.
  *
  * Douay-Rheims follows the Vulgate's numbering; the lectionary follows the
  * Hebrew. `toDouay` converts the places where they differ (most of the
@@ -451,16 +452,40 @@ export const CHECK_BOOKS = new Set(['Sirach', 'Tobit', 'Judith', 'Esther'])
 
 const chapterCache = new Map()
 
+// The whole Douay-Rheims ships with the app (scripts/fetch-bible.mjs), one
+// file per book, loaded the first time a passage from it is needed and
+// precached for offline use. Outside Vite (scripts, tests) there is no glob.
+let bundled = {}
+try {
+  bundled = import.meta.glob('../data/bible/*.json', { import: 'default' })
+} catch {
+  /* fall back to the network */
+}
+const bookFiles = new Map()
+
+async function bundledChapter(book, chapter) {
+  const load = bundled[`../data/bible/${BOOKS[book]}.json`]
+  if (!load) return null
+  if (!bookFiles.has(book)) bookFiles.set(book, load())
+  const list = (await bookFiles.get(book))?.[chapter]
+  if (!list) return null
+  const verses = new Map()
+  list.forEach((text, i) => text && verses.set(i + 1, text))
+  return verses
+}
+
 async function fetchChapter(book, chapter) {
   const key = `${book}:${chapter}`
   if (chapterCache.has(key)) return chapterCache.get(key)
   const p = (async () => {
+    const local = await bundledChapter(book, chapter).catch(() => null)
+    if (local) return local
     let res
     try {
       res = await fetch(`${API}/${BOOKS[book]}/${chapter}.json`)
     } catch {
       throw new Error(
-        "Couldn't reach the Bible service. Check the connection — readings are fetched during prep.",
+        "This passage isn't in the built-in Bible and the Bible service can't be reached.",
       )
     }
     if (!res.ok) throw new Error(`${book} ${chapter} isn't available (${res.status}).`)
@@ -480,9 +505,7 @@ async function fetchChapter(book, chapter) {
  * index of the comma-separated piece it came from — psalm stanzas follow those.
  */
 export async function fetchPassage(citation) {
-  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-    throw new Error("You're offline. Build the readings during prep, while there's a connection.")
-  }
+  // No online check: the Bible is built in, so this works on an offline laptop.
   const books = parseCitation(citation)
   const verses = []
   let group = 0

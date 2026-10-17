@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { RITUALS, ritualOption } from '../data/ritual'
 import { useContent } from '../store/useContent'
 import { useCue } from '../store/useLive'
 import {
@@ -20,6 +21,8 @@ import { hymnSuggestionsFor, isSundayMass } from '../lib/autoMass'
 import { rememberedSelections, saveResponses, importResponses } from '../lib/responses'
 import { announcementItem, showsOn } from '../lib/announcements'
 import { uid } from '../lib/id'
+import { DRAG_READING } from '../lib/dragTypes'
+import { fmtDuration, namesToPractise, readingSeconds } from '../lib/timing'
 
 /**
  * The readings — and the whole Mass — for a date.
@@ -30,6 +33,9 @@ import { uid } from '../lib/id'
  * else is under Options.
  */
 export default function Readings() {
+  // ?ritual=funeral|wedding: the same page, with the rite's own readings.
+  const [params] = useSearchParams()
+  const ritual = RITUALS[params.get('ritual')] ? params.get('ritual') : ''
   const planDate = useContent((s) => s.plan.date)
   const [date, setDate] = useState(planDate || today())
   useEffect(() => {
@@ -50,6 +56,38 @@ export default function Readings() {
     }
   }, [date])
 
+  // Planning keys (see "?"): N/P Sundays, [ ] days, T today, F or / to find a feast.
+  useEffect(() => {
+    const onKey = (e) => {
+      const el = document.activeElement
+      if (
+        el &&
+        (el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA' ||
+          el.tagName === 'SELECT' ||
+          el.isContentEditable)
+      )
+        return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const dow = new Date(`${date}T12:00:00`).getDay()
+      const go = {
+        n: () => setDate(shift(date, 7 - dow || 7)),
+        p: () => setDate(shift(date, -(dow || 7))),
+        ']': () => setDate(shift(date, 1)),
+        '[': () => setDate(shift(date, -1)),
+        t: () => setDate(today()),
+        f: () => document.querySelector('.feast-search input')?.focus(),
+        '/': () => document.querySelector('.feast-search input')?.focus(),
+      }[e.key.toLowerCase()]
+      if (go) {
+        e.preventDefault()
+        go()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [date])
+
   // Swipe left / right between days on a tablet.
   const touch = useRef(null)
   const onTouchStart = (e) => (touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY })
@@ -66,7 +104,7 @@ export default function Readings() {
       <DateBar date={date} setDate={setDate} planDate={planDate} />
       {error && <p className="error pad">{error}</p>}
       {!day && !error && <p className="muted pad">Opening the calendar…</p>}
-      {day && <Day key={day.date} day={day} />}
+      {day && <Day key={`${day.date}:${ritual}`} day={day} ritual={ritual} />}
     </div>
   )
 }
@@ -296,7 +334,7 @@ function useDays(dates) {
 
 // --- the day -----------------------------------------------------------------------
 
-function Day({ day }) {
+function Day({ day, ritual }) {
   const navigate = useNavigate()
   const insertLectionary = useContent((s) => s.insertLectionary)
   const placeAnnouncements = useContent((s) => s.placeAnnouncements)
@@ -305,8 +343,11 @@ function Day({ day }) {
   const cuedId = useCue((s) => s.itemId)
   const cue = useCue((s) => s.cue)
 
-  const [optionId, setOptionId] = useState(day.options[0]?.id ?? null)
-  const option = day.options.find((o) => o.id === optionId) ?? day.options[0] ?? null
+  const options = useMemo(() => (ritual ? [ritualOption(ritual, day)] : day.options), [ritual, day])
+  const rite = ritual ? RITUALS[ritual] : null
+  const [who, setWho] = useState('')
+  const [optionId, setOptionId] = useState(options[0]?.id ?? null)
+  const option = options.find((o) => o.id === optionId) ?? options[0] ?? null
   const parts = useMemo(() => (option ? partsOf(option.readings) : []), [option])
 
   const [sel, setSel] = useState(() => rememberedSelections(parts))
@@ -338,6 +379,7 @@ function Day({ day }) {
   useEffect(() => setInclude({}), [optionId])
   const gloria =
     include.gloria ??
+    (rite ? rite.gloria : null) ??
     (ctx
       ? belongs(
           ORDER.find((x) => x.id === 'gloria'),
@@ -346,6 +388,7 @@ function Day({ day }) {
       : false)
   const creed =
     include.creed ??
+    (rite ? false : null) ?? // funeral and wedding Masses have no Creed
     (ctx
       ? belongs(
           ORDER.find((x) => x.id === 'creed'),
@@ -380,6 +423,8 @@ function Day({ day }) {
             include: { gloria, creed },
             hymns: true,
             prayers,
+            ritual,
+            ritualWho: who,
           })
         : await buildMass(option, parts, sel, common)
       const items = wholeMass ? fillHymnPlaces(out.items, picks, songs, uid) : out.items
@@ -396,6 +441,35 @@ function Day({ day }) {
       setProgress(null)
     }
   }
+
+  // J / K step the preview through the readings; A adds the Mass.
+  useEffect(() => {
+    const onKey = (e) => {
+      const el = document.activeElement
+      if (
+        el &&
+        (el.tagName === 'INPUT' ||
+          el.tagName === 'TEXTAREA' ||
+          el.tagName === 'SELECT' ||
+          el.isContentEditable)
+      )
+        return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const k = e.key.toLowerCase()
+      if (k === 'j' || k === 'k') {
+        e.preventDefault()
+        const i = parts.findIndex((x) => x.part === previewPart)
+        const next = parts[Math.min(parts.length - 1, Math.max(0, i + (k === 'j' ? 1 : -1)))]
+        if (next) setPreviewPart(next.part)
+      }
+      if (k === 'a' && !progress) {
+        e.preventDefault()
+        build()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  })
 
   if (!p) return <p className="empty pad">No celebration found for this date.</p>
   const included = parts.filter((x) => sel[x.part]?.include !== false)
@@ -414,7 +488,8 @@ function Day({ day }) {
       <section className={`celebration lit-border-${day.color}`}>
         <div className="row between">
           <div>
-            <h2 className="celebration-name">{p.name}</h2>
+            {rite && <span className="badge rite-badge">{rite.title}</span>}
+            <h2 className="celebration-name">{rite ? `${rite.title} · ${longDate(day.date)}` : p.name}</h2>
             <p className="muted">
               {longDate(day.date)} · {gradeLabel(p, isSunday)} · {day.season} · {cap(day.color)}
             </p>
@@ -424,7 +499,25 @@ function Day({ day }) {
             <span className={`cycle${!isSunday && p.grade < 6 ? ' on' : ''}`}>Year {day.cycles.weekday}</span>
           </div>
         </div>
-        {day.events.length > 1 && (
+        {rite && (
+          <div className="row rite-row">
+            <input
+              className="notice-title"
+              placeholder={rite.who}
+              value={who}
+              onChange={(e) => setWho(e.target.value)}
+              aria-label={rite.who}
+            />
+            <Link to="/readings" className="small">
+              Back to the day’s readings
+            </Link>
+            <span className="muted small full-row">
+              Choose each reading with the family from the list in its row; the first is the usual default.
+              The rite’s own moments ({rite.extras.map((x) => x.title).join(', ')}) go in as title slides.
+            </span>
+          </div>
+        )}
+        {!rite && day.events.length > 1 && (
           <p className="muted small">
             Also today:{' '}
             {day.events
@@ -433,11 +526,11 @@ function Day({ day }) {
               .join(' · ')}
           </p>
         )}
-        {day.options.length > 1 && (
+        {options.length > 1 && (
           <label className="field inline mass-pick">
             <span>Mass</span>
             <select value={option?.id} onChange={(e) => setOptionId(e.target.value)}>
-              {day.options.map((o) => (
+              {options.map((o) => (
                 <option key={o.id} value={o.id}>
                   {[o.title, o.mass, o.note].filter(Boolean).join(' — ')}
                 </option>
@@ -458,7 +551,16 @@ function Day({ day }) {
                 return (
                   <li
                     key={part.part}
-                    className={`${on ? '' : 'off'}${previewPart === part.part ? ' previewing' : ''}`}
+                    className={`${on ? '' : 'off'}${previewPart === part.part ? ' previewing' : ''} draggable`}
+                    draggable
+                    title="Drag into the service plan to add just this reading"
+                    onDragStart={(e) => {
+                      e.dataTransfer.setData(
+                        DRAG_READING,
+                        JSON.stringify({ date: day.date, optionId: option.id, part: part.part, sel: s }),
+                      )
+                      e.dataTransfer.effectAllowed = 'copy'
+                    }}
                     onClick={(e) => {
                       if (!e.target.closest('input,select,textarea,button,label')) setPreviewPart(part.part)
                     }}
@@ -505,6 +607,7 @@ function Day({ day }) {
                       </button>
                     </div>
 
+                    {on && <ReadingFacts part={part} sel={s} />}
                     {on && isPsalm(part.part) && (
                       <input
                         className={`response${s.response?.trim() ? '' : ' needs'}`}
@@ -727,6 +830,41 @@ function Day({ day }) {
 
       {result && <BuildResult result={result} onLive={() => navigate('/live')} />}
     </div>
+  )
+}
+
+/** At a glance, for the planner and the lector: how long, and which names to practise. */
+function ReadingFacts({ part, sel }) {
+  const citation = part.choices[sel.choice ?? 0]
+  const pasted = sel.source === 'paste' ? sel.text?.trim() : ''
+  const [facts, setFacts] = useState(null)
+  useEffect(() => {
+    let live = true
+    const done = (text) =>
+      live &&
+      setFacts({
+        time: fmtDuration(readingSeconds(text)),
+        names: isPsalm(part.part) ? [] : namesToPractise(text),
+      })
+    if (pasted) done(pasted)
+    else
+      fetchPassage(citation)
+        .then((p) => done(p.verses.map((v) => v.text).join(' ')))
+        .catch(() => live && setFacts(null))
+    return () => {
+      live = false
+    }
+  }, [citation, pasted, part.part])
+  if (!facts || part.part === 'gospel_acclamation') return null
+  return (
+    <p className="reading-facts muted small">
+      ≈ {facts.time}
+      {facts.names.length > 0 && (
+        <>
+          {' · '}Names to practise: <span className="names">{facts.names.join(', ')}</span>
+        </>
+      )}
+    </p>
   )
 }
 

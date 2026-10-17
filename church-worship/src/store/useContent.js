@@ -129,6 +129,15 @@ export const useContent = create(
           return { plan: { ...s.plan, items } }
         }),
 
+      /** Put items next to `id` — before it or after it — or at the end. */
+      insertItemsAt: (newItems, id = null, before = false) =>
+        set((s) => {
+          const items = [...s.plan.items]
+          const at = items.findIndex((it) => it.id === id)
+          items.splice(at === -1 ? items.length : before ? at : at + 1, 0, ...newItems)
+          return { plan: { ...s.plan, items } }
+        }),
+
       /** Put ready-made items (imports) after `afterId`, or at the end. */
       insertItems: (newItems, afterId = null) =>
         set((s) => {
@@ -391,7 +400,7 @@ export const useContent = create(
         }),
 
       /** Copy a library entry into the open service, after `afterId` if given. */
-      addFromLibrary: (libId, afterId = null) => {
+      addFromLibrary: (libId, afterId = null, before = false) => {
         const src = get().songs.find((x) => x.id === libId)
         if (!src) return null
         const item = cloneItem(src, { libraryId: libId })
@@ -407,8 +416,8 @@ export const useContent = create(
             items[target] = item
             return { plan: { ...s.plan, items } }
           }
-          const at = afterId ? target + 1 : items.length
-          items.splice(at || items.length, 0, item)
+          const at = target === -1 ? items.length : before ? target : target + 1
+          items.splice(at, 0, item)
           return { plan: { ...s.plan, items } }
         })
         return item.id

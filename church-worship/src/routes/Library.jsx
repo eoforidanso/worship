@@ -4,6 +4,7 @@ import { useContent } from '../store/useContent'
 import { useLive, useCue } from '../store/useLive'
 import { exportBundle, importBundle } from '../lib/bundle'
 import { starterSongs } from '../data/hymns'
+import { DRAG_SONG } from '../lib/dragTypes'
 
 const starterIds = starterSongs().map((x) => x.id)
 
@@ -300,7 +301,16 @@ function Songs() {
 
       <ul className="song-list">
         {shown.map((x) => (
-          <li key={x.id} className="svc-card">
+          <li
+            key={x.id}
+            className="svc-card draggable"
+            draggable
+            title="Drag into the service plan, or press + Add to service"
+            onDragStart={(e) => {
+              e.dataTransfer.setData(DRAG_SONG, x.id)
+              e.dataTransfer.effectAllowed = 'copy'
+            }}
+          >
             <button className="svc-main" onClick={() => setOpen(open === x.id ? null : x.id)}>
               <strong>{x.title}</strong>
               <span className="muted small">

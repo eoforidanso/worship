@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import SafeBoundary from '../components/SafeBoundary'
+import PreviewDock from '../components/PreviewDock'
 import ServicePlanner from '../components/ServicePlanner'
 import { useLive, useCue } from '../store/useLive'
 import { useContent } from '../store/useContent'
@@ -9,6 +10,7 @@ import { subscribePwa, applyUpdate, dismissOfflineReady, promptInstall, installH
 import { describeDay } from '../lib/lectionary'
 import { useLiturgicalColour } from '../lib/useLiturgicalColour'
 import { startRemoteControl } from '../lib/remote'
+import { startHistory, undo, redo } from '../lib/history'
 
 const TABS = [
   { to: '/live', label: 'Live' },
@@ -32,6 +34,11 @@ export default function Shell() {
     const saved = readPref('worship-rail')
     return saved ? saved === 'open' && !narrow() : !narrow()
   })
+  const [dockOpen, setDockOpen] = useState(() => readPref('worship-dock') !== 'closed')
+  const setDock = (open) => {
+    setDockOpen(open)
+    writePref('worship-dock', open ? 'open' : 'closed')
+  }
   const setRail = (open) => {
     setRailOpen(open)
     writePref('worship-rail', open ? 'open' : 'closed')
@@ -54,6 +61,7 @@ export default function Shell() {
   useGlobalShortcuts()
   useAutoAdvance()
   useEffect(() => startRemoteControl(), [])
+  useEffect(() => startHistory(), [])
   useLiturgicalColour()
   const status = useConnectionStatus()
 
@@ -113,6 +121,7 @@ export default function Shell() {
         </div>
       </header>
 
+      <Shortcuts />
       <OfflineNotice />
       <BackupReminder />
 
@@ -127,6 +136,17 @@ export default function Shell() {
             <Outlet />
           </SafeBoundary>
         </main>
+        {/* Live, Compose and Readings have their own previews; every other tab gets this one. */}
+        {dockOpen && !/^\/(live|compose|readings)/.test(pathname) && (
+          <SafeBoundary variant="page">
+            <PreviewDock onClose={() => setDock(false)} />
+          </SafeBoundary>
+        )}
+        {!dockOpen && !/^\/(live|compose|readings)/.test(pathname) && (
+          <button className="dock-reopen" onClick={() => setDock(true)} title="Show the preview">
+            Preview ◂
+          </button>
+        )}
       </div>
     </div>
   )
@@ -315,6 +335,101 @@ function BackupReminder() {
   )
 }
 
+/** "?" anywhere: every key the app knows, by where it works. */
+function Shortcuts() {
+  const [open, setOpen] = useState(false)
+  useEffect(() => {
+    const toggle = () => setOpen((v) => !v)
+    const esc = (e) => e.key === 'Escape' && setOpen(false)
+    window.addEventListener('worship-shortcuts', toggle)
+    window.addEventListener('keydown', esc)
+    return () => {
+      window.removeEventListener('worship-shortcuts', toggle)
+      window.removeEventListener('keydown', esc)
+    }
+  }, [])
+  if (!open) return null
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform)
+  const mod = mac ? '⌘' : 'Ctrl+'
+  const groups = [
+    [
+      'During Mass (any tab)',
+      [
+        ['→  ↓  Space  PgDn', 'Next slide'],
+        ['←  ↑  PgUp', 'Previous slide'],
+        ['B', 'Blackout'],
+        ['C', 'Clear text, keep the background'],
+        ['L', 'Show the logo'],
+        ['1 – 9', 'That slide of the selected item'],
+      ],
+    ],
+    [
+      'On Live',
+      [
+        ['Enter', 'Put the selected item on screen'],
+        ['Esc', 'Reset the screen'],
+      ],
+    ],
+    [
+      'Readings',
+      [
+        ['N  /  P', 'Next / previous Sunday'],
+        [']  /  [', 'Next / previous day'],
+        ['T', 'Today'],
+        ['J  /  K', 'Next / previous reading in the preview'],
+        ['F  or  /', 'Find a feast or saint'],
+        ['A', 'Add the Mass to the service'],
+      ],
+    ],
+    [
+      'Anywhere',
+      [
+        ['S', 'Find a song to add'],
+        [`${mod}Z`, 'Undo'],
+        [mac ? '⇧⌘Z' : 'Ctrl+Y', 'Redo'],
+        ['?', 'This list'],
+      ],
+    ],
+  ]
+  return (
+    <div className="shortcuts-backdrop" onClick={() => setOpen(false)}>
+      <div
+        className="shortcuts"
+        role="dialog"
+        aria-label="Keyboard shortcuts"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="row between">
+          <h2 className="celebration-name">Keyboard shortcuts</h2>
+          <button className="icon-btn" onClick={() => setOpen(false)}>
+            ✕
+          </button>
+        </div>
+        <div className="shortcut-groups">
+          {groups.map(([title, keys]) => (
+            <section key={title}>
+              <h3>{title}</h3>
+              <dl>
+                {keys.map(([k, what]) => (
+                  <div key={k}>
+                    <dt>
+                      <kbd>{k}</kbd>
+                    </dt>
+                    <dd>{what}</dd>
+                  </div>
+                ))}
+              </dl>
+            </section>
+          ))}
+        </div>
+        <p className="muted small">
+          Keys are ignored while you type in a box, so typing never moves the projector.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function useConnectionStatus() {
   const [status, setStatus] = useState('offline')
   useEffect(() => subscribeStatus(setStatus), [])
@@ -348,11 +463,26 @@ function useAutoAdvance() {
  * Operator keyboard control. Ignored while a text field has focus so typing
  * lyrics never advances the projector.
  */
+const onLive = () => /\/live\/?$/.test(window.location.pathname)
+
 function useGlobalShortcuts() {
   useEffect(() => {
     const onKey = (e) => {
       const el = document.activeElement
       const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+      // ⌘Z / Ctrl+Z undo the plan, ⇧⌘Z / Ctrl+Y redo — except in a text box,
+      // where they keep undoing the typing as usual.
+      if ((e.metaKey || e.ctrlKey) && !typing) {
+        const k = e.key.toLowerCase()
+        if (k === 'z' && !e.shiftKey) {
+          e.preventDefault()
+          return undo()
+        }
+        if ((k === 'z' && e.shiftKey) || k === 'y') {
+          e.preventDefault()
+          return redo()
+        }
+      }
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return
 
       const live = useLive.getState()
@@ -374,6 +504,8 @@ function useGlobalShortcuts() {
           // Take the cued item live — but only from the plan, never from a
           // focused button, where Enter already means "press this".
           if (el && el.tagName === 'BUTTON') return
+          // Only on Live: elsewhere Enter is for the page (and must never project by accident).
+          if (!onLive()) return
           const id = useCue.getState().itemId
           if (id && id !== live.itemId) {
             e.preventDefault()
@@ -410,8 +542,26 @@ function useGlobalShortcuts() {
           live.toggleClear()
           break
         case 'Escape':
+          // Only on Live: on other tabs Esc closes things, it must not clear the projector.
+          if (!onLive()) return
           e.preventDefault()
           live.reset()
+          break
+        case '?':
+          e.preventDefault()
+          window.dispatchEvent(new Event('worship-shortcuts'))
+          break
+        case 's':
+        case 'S':
+          // Find a song: the library box under the plan.
+          if (onLive()) return
+          {
+            const box = document.querySelector('.quick-add input')
+            if (box) {
+              e.preventDefault()
+              box.focus()
+            }
+          }
           break
         default:
       }
