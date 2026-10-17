@@ -13,8 +13,88 @@
     <meta name="apple-mobile-web-app-title" content="Ambo" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Ambo</title>
+    <style>
+      /* The opening screen, shown while the app loads (styles inline: it paints before any CSS file). */
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: radial-gradient(ellipse at 50% 40%, #1c2d57 0%, #0b1022 70%);
+        color: #f6de96;
+        font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
+        transition: opacity 0.45s ease;
+      }
+      #splash img {
+        width: 132px;
+        height: 132px;
+        border-radius: 28px;
+        box-shadow: 0 0 60px rgba(214, 172, 74, 0.35);
+        animation: splash-in 0.7s ease-out both;
+      }
+      #splash .name {
+        font-size: 52px;
+        font-weight: 500;
+        letter-spacing: 0.06em;
+        animation: splash-in 0.7s 0.15s ease-out both;
+      }
+      #splash .tag {
+        margin-top: -10px;
+        font-size: 17px;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #b9a674;
+        animation: splash-in 0.7s 0.3s ease-out both;
+      }
+      #splash.gone {
+        opacity: 0;
+        pointer-events: none;
+      }
+      @keyframes splash-in {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #splash img,
+        #splash .name,
+        #splash .tag {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" aria-hidden="true">
+      <img src="/icon-512.png" alt="" />
+      <div class="name">Ambo</div>
+      <div class="tag">The Mass, on screen</div>
+    </div>
+    <script>
+      // Never on the projector or the stage screen: those open straight to black.
+      ;(function () {
+        var s = document.getElementById('splash')
+        if (/\/(output|stage)\/?$/.test(location.pathname)) return s.remove()
+        var t0 = Date.now()
+        var hide = function () {
+          if (!s.isConnected || s.classList.contains('gone')) return
+          s.classList.add('gone')
+          setTimeout(function () {
+            s.remove()
+          }, 500)
+        }
+        // Called once the app has drawn; held a moment so the sign is seen, not flashed.
+        window.__amboReady = function () {
+          setTimeout(hide, Math.max(0, 1000 - (Date.now() - t0)))
+        }
+        setTimeout(hide, 6000) // whatever happens, never stand in the way
+      })()
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>

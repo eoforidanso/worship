@@ -88,4 +88,6 @@ Promise.all([mediaReady, fontsReady]).finally(() => {
       <RouterProvider router={router} />
     </React.StrictMode>,
   )
+  // Lift the opening screen (index.html) once the first frame is up.
+  requestAnimationFrame(() => window.__amboReady?.())
 })
