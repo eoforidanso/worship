@@ -19,6 +19,7 @@ import { useLive, useCue } from "../store/useLive";
 import { urlFor } from "../lib/mediaStore";
 import { ORDER } from "../data/orderOfMass";
 import { sectionOf } from "../lib/sections";
+import { announceBuilt, runtimeMinutes } from "../lib/confidence";
 import { filesToItems, textToItem } from "../lib/importer";
 import { readiness } from "../lib/readiness";
 import { useHistory, undo, redo, restoreSnapshot } from "../lib/history";
@@ -88,6 +89,11 @@ export default function ServicePlanner({ onEdit }) {
   };
   const ready = useMemo(() => readiness(items), [items]);
   const [checkOpen, setCheckOpen] = useState(false);
+  useEffect(() => {
+    const open = () => setCheckOpen(true);
+    window.addEventListener("ambo-open-checklist", open);
+    return () => window.removeEventListener("ambo-open-checklist", open);
+  }, []);
   const [importing, setImporting] = useState(false);
   const [dropping, setDropping] = useState(false);
   const [dropped, setDropped] = useState(null); // files dropped on the plan, for the panel
@@ -185,7 +191,15 @@ export default function ServicePlanner({ onEdit }) {
       <div className="planner-head">
         <h2>Service plan</h2>
         <span className="row">
-          <span className="muted">{items.length} items</span>
+          <span className="muted">
+            {items.length} items
+            {items.some(sectionOf) && (
+              <span title="Estimated, with the homily and the parts nothing is projected for">
+                {" "}
+                · ≈ {runtimeMinutes(items)} min
+              </span>
+            )}
+          </span>
           <HistoryButtons />
           <span className="segmented layout plan-view">
             {["list", "timeline"].map((v) => (
@@ -237,7 +251,7 @@ export default function ServicePlanner({ onEdit }) {
         >
           <span className="readiness-text">
             {ready.ready === ready.total
-              ? "✓ Ready for Mass"
+              ? `✓ Everything ready · ${ready.total} of ${ready.total} items`
               : `Ready ${ready.ready} of ${ready.total} · ${ready.total - ready.ready} to check →`}
           </span>
           <span className="readiness-bar">
@@ -660,7 +674,7 @@ function Checklist({ items, ready, onFix, onClose }) {
                         className="btn btn-sm"
                         onClick={() => onFix(it.id)}
                       >
-                        Fix
+                        Fix →
                       </button>
                     )}
                   </li>
@@ -691,6 +705,10 @@ function OneClickMass({ onDone, onCustomise }) {
       const out = await buildDefaultMass(date, {
         onProgress: (_, label) => setProgress(label),
       });
+      announceBuilt(
+        useContent.getState().plan.items,
+        useContent.getState().plan.title,
+      );
       onDone(
         out.items.find((it) => it.type === "scripture")?.id ?? out.items[0]?.id,
       );
@@ -710,6 +728,10 @@ function OneClickMass({ onDone, onCustomise }) {
       const out = await buildTemplate(kind, date, {
         onProgress: (_, label) => setProgress(label),
       });
+      announceBuilt(
+        useContent.getState().plan.items,
+        useContent.getState().plan.title,
+      );
       if (out.open) navigate(out.open);
       else
         onDone(

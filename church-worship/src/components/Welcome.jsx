@@ -5,6 +5,7 @@ import { useCue } from "../store/useLive";
 import { describeDay, dayOf, partsOf } from "../lib/lectionary";
 import { showsOn } from "../lib/announcements";
 import { BIBLES, preferredBible } from "../lib/bible";
+import { announceBuilt } from "../lib/confidence";
 
 const longDate = (iso) =>
   new Date(`${iso}T12:00:00`).toLocaleDateString(undefined, {
@@ -66,6 +67,10 @@ export default function Welcome() {
       const out = await buildDefaultMass(date, {
         onProgress: (_, label) => setProgress(label),
       });
+      announceBuilt(
+        useContent.getState().plan.items,
+        useContent.getState().plan.title,
+      );
       const first =
         out.items.find((it) => it.type === "scripture") ?? out.items[0];
       if (first) cue(first.id);
@@ -76,86 +81,87 @@ export default function Welcome() {
     }
   };
 
+  const hour = new Date().getHours();
+  const greeting =
+    hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const name = parish?.name?.trim();
+  const times = parish?.massTimes?.trim();
+
   return (
-    <div className="welcome">
-      <p className="welcome-hello">
-        {parish?.name?.trim() ? (
-          <>
-            Welcome back · <strong>{parish.name.trim()}</strong>
-          </>
-        ) : (
-          "Welcome to Ambo"
-        )}
-      </p>
-      <div className={`welcome-day lit-border-${day?.color ?? "green"}`}>
-        <p className="muted">{date ? longDate(date) : ""}</p>
-        <h2>{day?.name ?? "…"}</h2>
-        <p className="muted">
-          {[
-            day?.grade,
-            day?.cycle,
-            parish?.massTimes?.trim() && `Mass ${parish.massTimes.trim()}`,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
+    // The Church year, felt before anything is built: the season lights the page.
+    <div
+      className="welcome-page"
+      data-season={day?.season ?? ""}
+      data-colour={day?.color ?? ""}
+    >
+      <div className="welcome">
+        <p className="welcome-greeting">{greeting}</p>
+        <h1 className="welcome-parish">{name || "Welcome to Ambo"}</h1>
+        <div className={`welcome-day lit-border-${day?.color ?? "green"}`}>
+          <p className="muted">{date ? longDate(date) : ""}</p>
+          <h2>{day?.name ?? "…"}</h2>
+          <p className="muted">
+            {[day?.grade, day?.cycle].filter(Boolean).join(" · ")}
+          </p>
+          {times && <p className="welcome-times">{times} Mass</p>}
+        </div>
+
+        <button
+          className="btn btn-gold btn-xl welcome-build"
+          onClick={build}
+          disabled={!!progress || !date}
+        >
+          {progress ? "Building the Mass…" : "✠ Build this day’s Mass"}
+        </button>
+        <p className="muted small welcome-progress">
+          {progress || error || "Everything stays editable afterwards."}
         </p>
+
+        <ul className="welcome-facts">
+          <li className="ok">
+            <span>✓</span> Readings ready — {facts ? facts.readings : "…"} from
+            the Lectionary, in the {BIBLES[preferredBible()].label}
+          </li>
+          <li className="ok">
+            <span>✓</span> The Order of Mass, with the Gloria and Creed as the
+            day requires
+          </li>
+          <li className={facts?.hymns ? "ok" : "warn"}>
+            <span>{facts?.hymns ? "✓" : "○"}</span>{" "}
+            {facts?.hymns
+              ? `Seasonal hymns suggested for ${facts.hymns} places`
+              : "Hymns: choose them after building"}
+          </li>
+          <li className={notices ? "ok" : "warn"}>
+            <span>{notices ? "✓" : "○"}</span>{" "}
+            <span>
+              {notices ? (
+                `${notices} notice${notices === 1 ? "" : "s"} for this week, after Communion`
+              ) : (
+                <>
+                  No notices for this week yet —{" "}
+                  <button
+                    className="link"
+                    onClick={() => navigate("/announcements")}
+                  >
+                    add parish events, collections and thank-yous
+                  </button>
+                </>
+              )}
+            </span>
+          </li>
+        </ul>
+
+        <p className="welcome-other small">
+          <button className="link" onClick={() => navigate("/readings")}>
+            Choose the readings first
+          </button>{" "}
+          · or start from <em>Other services…</em> in the plan (funeral,
+          wedding, Benediction…)
+        </p>
+
+        {!parish?.setUp && <ParishSetup />}
       </div>
-
-      <button
-        className="btn btn-gold btn-xl welcome-build"
-        onClick={build}
-        disabled={!!progress || !date}
-      >
-        {progress ? "Building the Mass…" : "✠ Build this day’s Mass"}
-      </button>
-      <p className="muted small welcome-progress">
-        {progress || error || "Everything stays editable afterwards."}
-      </p>
-
-      <ul className="welcome-facts">
-        <li className="ok">
-          <span>✓</span> Readings ready — {facts ? facts.readings : "…"} from
-          the Lectionary, in the {BIBLES[preferredBible()].label}
-        </li>
-        <li className="ok">
-          <span>✓</span> The Order of Mass, with the Gloria and Creed as the day
-          requires
-        </li>
-        <li className={facts?.hymns ? "ok" : "warn"}>
-          <span>{facts?.hymns ? "✓" : "○"}</span>{" "}
-          {facts?.hymns
-            ? `Seasonal hymns suggested for ${facts.hymns} places`
-            : "Hymns: choose them after building"}
-        </li>
-        <li className={notices ? "ok" : "warn"}>
-          <span>{notices ? "✓" : "○"}</span>{" "}
-          <span>
-            {notices ? (
-              `${notices} notice${notices === 1 ? "" : "s"} for this week, after Communion`
-            ) : (
-              <>
-                No notices for this week yet —{" "}
-                <button
-                  className="link"
-                  onClick={() => navigate("/announcements")}
-                >
-                  add parish events, collections and thank-yous
-                </button>
-              </>
-            )}
-          </span>
-        </li>
-      </ul>
-
-      <p className="welcome-other small">
-        <button className="link" onClick={() => navigate("/readings")}>
-          Choose the readings first
-        </button>{" "}
-        · or start from <em>Other services…</em> in the plan (funeral, wedding,
-        Benediction…)
-      </p>
-
-      {!parish?.setUp && <ParishSetup />}
     </div>
   );
 }

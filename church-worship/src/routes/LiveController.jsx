@@ -6,6 +6,7 @@ import { footerFor } from "../lib/render";
 import { remotePin, newRemotePin } from "../lib/remote";
 import Welcome from "../components/Welcome";
 import MassProgress from "../components/MassProgress";
+import { useConfidence, dismissBuilt, openChecklist } from "../lib/confidence";
 
 const themeFor = (themes, item) =>
   themes.find((t) => t.id === item?.themeId) ?? themes[0] ?? DEFAULT_THEME;
@@ -60,11 +61,22 @@ export default function LiveController() {
 
   return (
     <div className="live">
+      <BuiltBanner />
       <MassProgress items={plan.items} liveId={item?.id ?? null} />
       <section className="live-previews">
         <figure>
           <figcaption>
-            Live
+            {live.rehearsal ? (
+              <>
+                Rehearsal{" "}
+                <span className="cap-note">— the projector is dark</span>
+              </>
+            ) : (
+              <>
+                Live{" "}
+                <span className="cap-note">— the congregation sees this</span>
+              </>
+            )}
             {blackout && <em className="badge danger">Blackout</em>}
             {cleared && <em className="badge">Cleared</em>}
             {showLogo && <em className="badge">Logo</em>}
@@ -319,6 +331,14 @@ function Transport() {
         >
           Logo <kbd>L</kbd>
         </button>
+        <button
+          className={`btn rehearsal-btn${live.rehearsal ? " on" : ""}`}
+          onClick={live.toggleRehearsal}
+          title="Practise with everything working — the projector stays dark"
+          aria-pressed={live.rehearsal}
+        >
+          {live.rehearsal ? "End rehearsal" : "Rehearsal"}
+        </button>
         <PhoneRemote />
       </div>
 
@@ -367,5 +387,43 @@ function Transport() {
         </button>
       </div>
     </section>
+  );
+}
+
+/** Right after building: what went in, how long it will take, what's left. */
+function BuiltBanner() {
+  const built = useConfidence((s) => s.built);
+  if (!built) return null;
+  return (
+    <div className="built-banner" role="status">
+      <div>
+        <strong>✓ Mass built</strong>
+        <span>
+          {built.count} items · {built.parts} parts of the Mass · about{" "}
+          {built.minutes} minutes
+        </span>
+        <span className={built.todo ? "built-todo" : "built-ok"}>
+          {built.todo
+            ? `Ready to review — ${built.todo} thing${built.todo === 1 ? "" : "s"} to check`
+            : "Ready to review — everything is in place"}
+        </span>
+      </div>
+      <div className="row">
+        {built.todo > 0 && (
+          <button
+            className="btn btn-sm"
+            onClick={() => {
+              openChecklist();
+              dismissBuilt();
+            }}
+          >
+            Show me
+          </button>
+        )}
+        <button className="btn btn-quiet btn-sm" onClick={dismissBuilt}>
+          OK
+        </button>
+      </div>
+    </div>
   );
 }

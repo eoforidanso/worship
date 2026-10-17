@@ -23,8 +23,15 @@ export default function Output() {
   const themes = useContent((s) => s.themes);
   const logoUrl = useContent((s) => s.logoUrl);
 
-  const { itemId, slideIndex, blackout, cleared, showLogo, countdownTo } =
-    useLive();
+  const {
+    itemId,
+    slideIndex,
+    blackout,
+    cleared,
+    showLogo,
+    countdownTo,
+    rehearsal,
+  } = useLive();
 
   const item = plan.items.find((i) => i.id === itemId) ?? null;
   const theme =
@@ -81,9 +88,10 @@ export default function Output() {
           slide={slide}
           theme={theme}
           background={item?.background}
-          blackout={blackout}
+          // Rehearsal: the room sees nothing at all, whatever the operator does.
+          blackout={blackout || rehearsal}
           cleared={cleared}
-          showLogo={showLogo}
+          showLogo={showLogo && !rehearsal}
           logoUrl={logoUrl}
           countdownTo={countdownTo}
           footer={footerFor(item, slide, theme)}

@@ -151,6 +151,7 @@ export default function Shell() {
       </header>
 
       <Shortcuts />
+      <RehearsalBanner />
       <RestoredNotice />
       <OfflineNotice />
       <BackupReminder />
@@ -266,17 +267,19 @@ function InstallButton() {
 /** What the room is seeing, as one of: off · ready · live (plus blackout/cleared), and which item. */
 function useOnAir() {
   const open = useOutputOpen();
-  const { itemId, slideIndex, blackout, cleared } = useLive();
+  const { itemId, slideIndex, blackout, cleared, rehearsal } = useLive();
   // Live only when the projector really draws a slide: one in this plan.
   const item = useContent(
     (st) => st.plan.items.find((i) => i.id === itemId) ?? null,
   );
   const showing = !!item?.slides[slideIndex];
-  const state = !open
-    ? "off"
-    : showing && !blackout && !cleared
-      ? "live"
-      : "ready";
+  const state = rehearsal
+    ? "rehearsal"
+    : !open
+      ? "off"
+      : showing && !blackout && !cleared
+        ? "live"
+        : "ready";
   return {
     open,
     state,
@@ -284,6 +287,7 @@ function useOnAir() {
     slideIndex,
     blackout,
     cleared,
+    rehearsal,
   };
 }
 
@@ -293,13 +297,15 @@ function OutputButton() {
     off: "Off",
     ready: blackout ? "Black" : "Ready",
     live: "Live",
+    rehearsal: "Rehearsal",
   }[state];
   const title = {
     off: "Open the projector window — on the second screen when one is connected",
     ready: blackout
       ? "The projector window is open and showing black"
       : "The projector window is open; nothing is showing yet",
-    live: "Live — the projector is showing a slide now",
+    live: "Live — the congregation is seeing a slide now",
+    rehearsal: "Rehearsal — the projector stays dark whatever you do",
   }[state];
   return (
     <button
@@ -317,24 +323,47 @@ function OutputButton() {
 
 /**
  * Always in view during Mass: what the congregation is seeing right now.
- * "● LIVE · Penitential Act · 2/5", gold and slowly pulsing; "■ BLACK" or
- * "TEXT HIDDEN" when those are on. Gone when the projector shows nothing.
+ * "● LIVE · On screen: Penitential Act · 2/5", gold and slowly pulsing;
+ * "BLACK" or "TEXT HIDDEN" when those are on; "REHEARSAL" (the projector
+ * dark) while practising. Gone when nothing is up.
  */
 function LiveStrip() {
-  const { open, item, slideIndex, blackout, cleared } = useOnAir();
+  const { open, item, slideIndex, blackout, cleared, rehearsal } = useOnAir();
   const navigate = useNavigate();
-  if (!open || !item) return null;
-  const kind = blackout ? "black" : cleared ? "cleared" : "live";
-  const label = { live: "Live", black: "Black", cleared: "Text hidden" }[kind];
+  if (!item || (!open && !rehearsal)) return null;
+  const kind = rehearsal
+    ? "rehearsal"
+    : blackout
+      ? "black"
+      : cleared
+        ? "cleared"
+        : "live";
+  const label = {
+    live: "Live",
+    black: "Black",
+    cleared: "Text hidden",
+    rehearsal: "Rehearsal",
+  }[kind];
+  const lead =
+    kind === "live"
+      ? "Congregation sees"
+      : kind === "rehearsal"
+        ? "Practising"
+        : "Under it";
   return (
     <button
       className={`live-strip live-strip-${kind}`}
       onClick={() => navigate("/live")}
-      title="What the congregation is seeing now — open Live"
+      title={
+        kind === "rehearsal"
+          ? "Rehearsal: the projector is dark — this is only on your screen"
+          : "What the congregation is seeing now — open Live"
+      }
       aria-live="polite"
     >
       <span className="live-strip-light" aria-hidden="true" />
       <span className="live-strip-label">{label}</span>
+      <span className="live-strip-lead">{lead}</span>
       <span className="live-strip-title">{item.title}</span>
       {item.slides.length > 1 && (
         <span className="live-strip-pos">
@@ -342,6 +371,24 @@ function LiveStrip() {
         </span>
       )}
     </button>
+  );
+}
+
+/** While rehearsing: say so, plainly, across the whole window. */
+function RehearsalBanner() {
+  const rehearsal = useLive((s) => s.rehearsal);
+  const toggle = useLive((s) => s.toggleRehearsal);
+  if (!rehearsal) return null;
+  return (
+    <div className="notice notice-rehearsal" role="status">
+      <span>
+        <strong>Rehearsal mode</strong> — the projector stays dark. Everything
+        else works as it will at Mass: practise freely.
+      </span>
+      <button className="btn btn-soft" onClick={toggle}>
+        End rehearsal
+      </button>
+    </div>
   );
 }
 
@@ -441,11 +488,11 @@ function RestoredNotice() {
   return (
     <div className="notice notice-restored" role="status">
       <span>
-        <strong>✓ Restored</strong> — {restored.title || "your service"},{" "}
-        {restored.count} item
+        <strong>✓ Restored from autosave</strong> —{" "}
+        {restored.title || "your service"}, {restored.count} item
         {restored.count === 1 ? "" : "s"}
-        {when ? `, as last saved ${when}` : ""}. Every change is saved on this
-        computer as you work.
+        {when ? ` · saved ${when}` : ""}. Nothing was lost: every change is
+        saved on this computer as you work.
       </span>
       <button className="btn btn-quiet" onClick={() => setShown(false)}>
         OK

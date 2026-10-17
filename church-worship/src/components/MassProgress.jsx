@@ -2,6 +2,14 @@ import { useMemo } from "react";
 import { sectionOf, SECTIONS } from "../lib/sections";
 import { timeline } from "../lib/timing";
 
+const homily = () => {
+  try {
+    return Number(localStorage.getItem("worship-homily") ?? 10);
+  } catch {
+    return 10;
+  }
+};
+
 /**
  * Where we are in the Mass: its parts in order, each as wide as it usually
  * takes (the timeline's estimates, homily and Eucharistic Prayer included),
@@ -11,7 +19,7 @@ import { timeline } from "../lib/timing";
  */
 export default function MassProgress({ items, liveId }) {
   const bar = useMemo(() => {
-    const t = timeline(items);
+    const t = timeline(items, { homilyMinutes: homily() });
     if (!t.total) return null;
     const parts = new Map();
     let current = null;
@@ -38,6 +46,7 @@ export default function MassProgress({ items, liveId }) {
     const total = list.reduce((a, p) => a + p.seconds, 0);
     return {
       list: list.map((p) => ({ ...p, share: p.seconds / total })),
+      minutes: Math.round(t.total / 60),
       current,
       at: at == null ? null : Math.min(1, Math.max(0, (at - first) / total)),
     };
@@ -64,6 +73,12 @@ export default function MassProgress({ items, liveId }) {
           <span className="mp-mark" style={{ left: `${bar.at * 100}%` }} />
         )}
       </div>
+      <span
+        className="mp-total"
+        title="Estimated, with the homily and the parts nothing is projected for"
+      >
+        ≈ {bar.minutes} min
+      </span>
     </div>
   );
 }

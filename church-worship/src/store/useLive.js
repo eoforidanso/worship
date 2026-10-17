@@ -19,6 +19,9 @@ const initial = {
   cleared: false, // background stays, text is hidden
   message: '', // operator note shown on the stage display only
   countdownTo: null, // epoch ms, or null
+  // Rehearsal: everything works as in Mass, but every projector window stays
+  // dark. Not persisted, so a reload can never leave Sunday's screen dark.
+  rehearsal: false,
 }
 
 // Only these keys go over the wire. The store also holds action functions, and
@@ -77,6 +80,12 @@ export const useLive = create((set, get) => ({
   toggleBlackout: () => get().push({ blackout: !get().blackout, showLogo: false }),
   toggleLogo: () => get().push({ showLogo: !get().showLogo, blackout: false }),
   toggleClear: () => get().push({ cleared: !get().cleared }),
+  // Ending a rehearsal starts from a clean screen: what was being practised
+  // must never appear in front of the room the moment the projector wakes.
+  toggleRehearsal: () =>
+    get().rehearsal
+      ? get().push({ rehearsal: false, itemId: null, slideIndex: 0, blackout: false, cleared: false, showLogo: false })
+      : get().push({ rehearsal: true }),
   setMessage: (message) => get().push({ message }),
   startCountdown: (seconds) => get().push({ countdownTo: Date.now() + seconds * 1000 }),
   stopCountdown: () => get().push({ countdownTo: null }),
