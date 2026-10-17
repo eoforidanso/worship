@@ -23,32 +23,90 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 18px;
-        background: radial-gradient(ellipse at 50% 40%, #1c2d57 0%, #0b1022 70%);
+        overflow: hidden;
+        /* Light brightest behind the sign, fading smoothly out; a faint gold warmth around it. */
+        background:
+          radial-gradient(circle at 50% 42%, rgba(214, 172, 74, 0.09) 0, rgba(214, 172, 74, 0) 34vmax),
+          radial-gradient(ellipse 85% 75% at 50% 42%, #1d2f5c 0%, #142246 38%, #0b1022 78%, #070a17 100%);
         color: #f6de96;
         font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-        transition: opacity 0.45s ease;
+        transition: opacity 0.5s ease;
+      }
+      /* Soft rays from above, as through a high window: felt more than seen. */
+      #splash::before {
+        content: '';
+        position: absolute;
+        inset: -20% -10% 0;
+        background: repeating-conic-gradient(
+          from 180deg at 50% -10%,
+          rgba(246, 222, 150, 0) 0deg,
+          rgba(246, 222, 150, 0.022) 2.5deg,
+          rgba(246, 222, 150, 0) 5deg 12deg
+        );
+        -webkit-mask-image: radial-gradient(ellipse 45% 60% at 50% 30%, #000 0, transparent 100%);
+        mask-image: radial-gradient(ellipse 45% 60% at 50% 30%, #000 0, transparent 100%);
+        pointer-events: none;
+      }
+      #splash .mark {
+        position: relative;
+        width: clamp(120px, 12vmax, 152px);
+        aspect-ratio: 1;
+        animation: splash-in 0.8s ease-out both;
+      }
+      /* A slow, breathing glow behind the icon. */
+      #splash .mark::before {
+        content: '';
+        position: absolute;
+        inset: -45%;
+        border-radius: 50%;
+        background: radial-gradient(circle, rgba(214, 172, 74, 0.32) 0, rgba(214, 172, 74, 0) 65%);
+        animation: splash-breathe 7s ease-in-out infinite;
       }
       #splash img {
-        width: 132px;
-        height: 132px;
-        border-radius: 28px;
-        box-shadow: 0 0 60px rgba(214, 172, 74, 0.35);
-        animation: splash-in 0.7s ease-out both;
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 22%;
+        filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.35));
       }
       #splash .name {
-        font-size: 52px;
-        font-weight: 500;
-        letter-spacing: 0.06em;
-        animation: splash-in 0.7s 0.15s ease-out both;
+        margin-top: 22px;
+        font-size: clamp(48px, 5.2vmax, 57px);
+        font-weight: 600;
+        line-height: 1;
+        letter-spacing: 0.05em;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        animation: splash-in 0.8s 0.2s ease-out both;
       }
       #splash .tag {
-        margin-top: -10px;
-        font-size: 17px;
-        letter-spacing: 0.18em;
-        text-transform: uppercase;
-        color: #b9a674;
-        animation: splash-in 0.7s 0.3s ease-out both;
+        margin-top: 12px;
+        font-size: clamp(19px, 1.9vmax, 21px);
+        font-weight: 400;
+        font-variant-caps: all-small-caps;
+        letter-spacing: 0.14em;
+        color: #e2cd8f;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+        animation: splash-in 0.8s 0.4s ease-out both;
+      }
+      /* Only if loading runs long: a thin gold line, gently moving, to say it is on its way. */
+      #splash .loading {
+        position: relative;
+        margin-top: 26px;
+        width: 120px;
+        height: 2px;
+        border-radius: 2px;
+        overflow: hidden;
+        background: rgba(214, 172, 74, 0.15);
+        opacity: 0;
+        animation: splash-fade 0.6s 1.6s ease-out forwards;
+      }
+      #splash .loading::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        width: 40%;
+        background: linear-gradient(90deg, transparent, #d6ac4a, transparent);
+        animation: splash-slide 1.8s ease-in-out infinite;
       }
       #splash.gone {
         opacity: 0;
@@ -57,14 +115,39 @@
       @keyframes splash-in {
         from {
           opacity: 0;
-          transform: translateY(8px);
+          transform: translateY(6px);
+        }
+      }
+      @keyframes splash-fade {
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes splash-breathe {
+        0%,
+        100% {
+          opacity: 0.65;
+          transform: scale(0.96);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.04);
+        }
+      }
+      @keyframes splash-slide {
+        from {
+          transform: translateX(-100%);
+        }
+        to {
+          transform: translateX(250%);
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        #splash img,
-        #splash .name,
-        #splash .tag {
-          animation: none;
+        #splash *,
+        #splash *::before,
+        #splash *::after {
+          animation-duration: 0.01s !important;
+          animation-iteration-count: 1 !important;
         }
       }
     </style>
@@ -73,9 +156,10 @@
   <link rel="manifest" href="/worship/manifest.webmanifest"></head>
   <body>
     <div id="splash" aria-hidden="true">
-      <img src="/worship/icon-512.png" alt="" />
+      <div class="mark"><img src="/worship/icon-512.png" alt="" /></div>
       <div class="name">Ambo</div>
-      <div class="tag">The Mass, on screen</div>
+      <div class="tag">The Mass, on Screen</div>
+      <div class="loading"></div>
     </div>
     <script>
       // Never on the projector or the stage screen: those open straight to black.
