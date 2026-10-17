@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
 import SlideCanvas from '../components/SlideCanvas'
 import { useContent, DEFAULT_THEME } from '../store/useContent'
-import { useLive } from '../store/useLive'
+import { useLive, useCue } from '../store/useLive'
+import { footerFor } from '../lib/render'
+
+const themeFor = (themes, item) => themes.find((t) => t.id === item?.themeId) ?? themes[0] ?? DEFAULT_THEME
 
 export default function LiveController() {
   const plan = useContent((s) => s.plan)
@@ -11,15 +14,25 @@ export default function LiveController() {
   const live = useLive()
   const { itemId, slideIndex, blackout, cleared, showLogo, countdownTo, message } = live
 
+  const cuedId = useCue((s) => s.itemId)
+
   const item = useMemo(() => plan.items.find((i) => i.id === itemId) ?? null, [plan.items, itemId])
-  const theme = themes.find((t) => t.id === item?.themeId) ?? themes[0] ?? DEFAULT_THEME
+  const theme = themeFor(themes, item)
   const slide = item?.slides[slideIndex] ?? null
 
-  const nextSlide = useMemo(() => {
+  // The grid shows the cued item; it is only live once a slide is clicked.
+  const shown = plan.items.find((i) => i.id === cuedId) ?? item
+  const shownTheme = themeFor(themes, shown)
+  const shownIsLive = shown != null && shown.id === itemId
+
+  // Next is what the Next key will put up: the following slide, or the first
+  // slide of the following item — drawn in *that* item's theme and background.
+  const next = useMemo(() => {
     if (!item) return null
-    if (slideIndex + 1 < item.slides.length) return item.slides[slideIndex + 1]
+    if (slideIndex + 1 < item.slides.length) return { item, slide: item.slides[slideIndex + 1] }
     const i = plan.items.findIndex((it) => it.id === item.id)
-    return plan.items[i + 1]?.slides[0] ?? null
+    const nextItem = plan.items[i + 1]
+    return nextItem ? { item: nextItem, slide: nextItem.slides[0] } : null
   }, [item, slideIndex, plan.items])
 
   return (
@@ -41,37 +54,80 @@ export default function LiveController() {
             showLogo={showLogo}
             logoUrl={logoUrl}
             countdownTo={countdownTo}
+            footer={footerFor(item, slide, theme)}
             animate
+            fade
             className="preview-live"
           />
+          <p className="live-caption muted small">
+            {item ? (
+              <>
+                <strong>{item.title}</strong> · slide {slideIndex + 1} of {item.slides.length}
+                {item.autoAdvance > 0 && <> · auto-advancing every {item.autoAdvance}s</>}
+              </>
+            ) : (
+              'Nothing on screen'
+            )}
+          </p>
         </figure>
 
         <figure>
           <figcaption>Next</figcaption>
-          <SlideCanvas slide={nextSlide} theme={theme} background={item?.background} className="preview-next" />
+          <SlideCanvas
+            slide={next?.slide ?? null}
+            theme={themeFor(themes, next?.item)}
+            background={next?.item.background}
+            footer={footerFor(next?.item, next?.slide, themeFor(themes, next?.item))}
+            className="preview-next"
+          />
+          <p className="live-caption muted small">
+            {next
+              ? next.item.id === item?.id
+                ? next.slide.label || 'Next slide'
+                : `→ ${next.item.title}`
+              : 'End of service'}
+          </p>
         </figure>
       </section>
 
       <Transport />
 
       <section className="slide-strip">
-        <h3>
-          {item ? item.title : 'Nothing selected'}
-          {item?.subtitle && <span className="muted small"> — {item.subtitle}</span>}
+        <h3 className="strip-head">
+          <span>
+            {shown ? shown.title : 'Nothing selected'}
+            {shown?.subtitle && <span className="muted small"> — {shown.subtitle}</span>}
+          </span>
+          {shown && !shownIsLive && (
+            <>
+              <em className="badge cue">Cued — not on screen</em>
+              <button className="btn btn-primary btn-sm" onClick={() => live.goTo(shown.id, 0)}>
+                Go live <kbd>Enter</kbd>
+              </button>
+            </>
+          )}
         </h3>
         <div className="thumb-grid">
-          {item?.slides.map((sl, i) => (
+          {shown?.slides.map((sl, i) => (
             <button
               key={sl.id}
-              className={`thumb${i === slideIndex ? ' current' : ''}`}
-              onClick={() => live.goTo(item.id, i)}
+              className={`thumb${shownIsLive && i === slideIndex ? ' current' : ''}`}
+              onClick={() => live.goTo(shown.id, i)}
             >
-              <SlideCanvas slide={sl} theme={theme} background={item.background} />
-              <span className="thumb-label">{sl.label || `Slide ${i + 1}`}</span>
+              <SlideCanvas
+                slide={sl}
+                theme={shownTheme}
+                background={shown.background}
+                footer={footerFor(shown, sl, shownTheme)}
+              />
+              <span className="thumb-label">
+                {i < 9 && <kbd>{i + 1}</kbd>}
+                {sl.label || `Slide ${i + 1}`}
+              </span>
             </button>
           ))}
         </div>
-        {!item && <p className="empty">Pick an item from the service plan on the left.</p>}
+        {!shown && <p className="empty">Pick an item from the service plan on the left.</p>}
       </section>
     </div>
   )

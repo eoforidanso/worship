@@ -187,6 +187,7 @@ function drawBackground(ctx, bg, w, h, onReady) {
  * @param {string|null} opts.logoUrl   drawn centred when `showLogo`
  * @param {boolean}     opts.showLogo
  * @param {number|null} opts.countdownTo epoch ms; replaces the slide text
+ * @param {string}      opts.footer    small reference line under the text
  * @param {function}    opts.onReady   called when a lazily loaded asset lands
  */
 export function renderSlide(ctx, opts) {
@@ -199,6 +200,7 @@ export function renderSlide(ctx, opts) {
     logoUrl = null,
     showLogo = false,
     countdownTo = null,
+    footer = '',
     onReady,
   } = opts
 
@@ -238,8 +240,13 @@ export function renderSlide(ctx, opts) {
   }
 
   const pad = theme.padding * scale
+  // The footer belongs to the slide's words, so it goes when they do (clear,
+  // countdown) and takes its room out of the text box rather than overlapping.
+  const foot = countdownTo == null && footer ? footer : ''
+  const footSize = 34 * scale
+  const footRoom = foot ? footSize * 2 : 0
   const boxW = w - pad * 2
-  const boxH = h - pad * 2
+  const boxH = h - pad * 2 - footRoom
   const display = theme.uppercase ? text.toUpperCase() : text
 
   const { lines, size } = fitText(ctx, display, theme, boxW, boxH, scale)
@@ -249,8 +256,8 @@ export function renderSlide(ctx, opts) {
   const x = theme.align === 'left' ? pad : theme.align === 'right' ? w - pad : w / 2
   let y
   if (theme.valign === 'top') y = pad
-  else if (theme.valign === 'bottom') y = h - pad - blockH
-  else y = (h - blockH) / 2
+  else if (theme.valign === 'bottom') y = h - pad - footRoom - blockH
+  else y = (h - footRoom - blockH) / 2
 
   ctx.textAlign = theme.align
   ctx.textBaseline = 'top'
@@ -273,7 +280,25 @@ export function renderSlide(ctx, opts) {
     ctx.fillText(line, x, ly)
   })
 
+  if (foot) {
+    ctx.font = `500 ${footSize}px ${theme.fontFamily}`
+    ctx.globalAlpha = 0.78
+    ctx.fillStyle = theme.color
+    ctx.textBaseline = 'bottom'
+    ctx.fillText(foot, x, h - Math.max(pad * 0.6, footSize))
+  }
+
   ctx.restore()
+}
+
+/**
+ * The reference line for a slide: its own (scripture lookup writes one per
+ * slide), else the item's title and subtitle when the theme asks for it.
+ */
+export function footerFor(item, slide, theme) {
+  if (!theme?.showFooter || !slide) return ''
+  if (slide.footer) return slide.footer
+  return [item?.title, item?.subtitle].filter(Boolean).join(' · ')
 }
 
 export function formatCountdown(target) {

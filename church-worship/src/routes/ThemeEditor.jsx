@@ -46,7 +46,7 @@ export default function ThemeEditor() {
       </div>
 
       <div className="theme-preview">
-        <SlideCanvas slide={SAMPLE} theme={theme} />
+        <SlideCanvas slide={SAMPLE} theme={theme} footer={theme.showFooter ? 'Amazing Grace · John Newton' : ''} />
       </div>
 
       <div className="theme-controls">
@@ -123,6 +123,7 @@ export default function ThemeEditor() {
           <Toggle label="Uppercase" value={theme.uppercase} onChange={(v) => set({ uppercase: v })} />
           <Toggle label="Shadow" value={theme.shadow} onChange={(v) => set({ shadow: v })} />
           <Toggle label="Outline" value={theme.outline} onChange={(v) => set({ outline: v })} />
+          <Toggle label="Reference footer" value={!!theme.showFooter} onChange={(v) => set({ showFooter: v })} />
         </div>
 
         {theme.id !== DEFAULT_THEME.id && (

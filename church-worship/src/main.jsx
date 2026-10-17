@@ -6,6 +6,8 @@ import LiveController from './routes/LiveController'
 import SlideComposer from './routes/SlideComposer'
 import MediaBrowser from './routes/MediaBrowser'
 import ThemeEditor from './routes/ThemeEditor'
+import Library from './routes/Library'
+import Readings from './routes/Readings'
 import Output from './routes/Output'
 import Stage from './routes/Stage'
 import './lib/pwa'
@@ -22,6 +24,8 @@ const router = createBrowserRouter([
       { path: 'compose/:itemId?', element: <SlideComposer /> },
       { path: 'media', element: <MediaBrowser /> },
       { path: 'themes', element: <ThemeEditor /> },
+      { path: 'library', element: <Library /> },
+      { path: 'readings', element: <Readings /> },
     ],
   },
   // Standalone windows — no operator chrome.

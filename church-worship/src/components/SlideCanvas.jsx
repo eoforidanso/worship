@@ -8,7 +8,27 @@ import { renderSlide } from '../lib/render'
  * `animate` turns on a requestAnimationFrame loop — needed for countdowns and
  * video backgrounds. Static surfaces (thumbnails) leave it off and redraw only
  * when their props change, which keeps a 30-thumbnail planner cheap.
+ *
+ * `fade` (animated surfaces only) cross-dissolves from the last frame to the
+ * new one whenever what's on screen changes — slide, blackout, clear, logo.
+ * A hard cut on a projector reads as a glitch; a short dissolve reads as
+ * intent.
  */
+
+const FADE_MS = 350
+
+const frameKey = (p) =>
+  [
+    // Slide id, not its text: an edit to the live slide should land at once,
+    // not dissolve on every keystroke.
+    p.slide?.id ?? '',
+    p.blackout,
+    p.cleared,
+    p.showLogo,
+    p.background?.mediaId ?? p.background?.value ?? '',
+    p.theme?.id ?? '',
+  ].join('|')
+
 export default function SlideCanvas({
   slide,
   theme,
@@ -18,7 +38,9 @@ export default function SlideCanvas({
   logoUrl = null,
   showLogo = false,
   countdownTo = null,
+  footer = '',
   animate = false,
+  fade = false,
   className = '',
   style,
 }) {
@@ -26,7 +48,9 @@ export default function SlideCanvas({
   const canvasRef = useRef(null)
   // Props are read through a ref so the rAF loop never needs re-subscribing.
   const propsRef = useRef(null)
-  propsRef.current = { slide, theme, background, blackout, cleared, logoUrl, showLogo, countdownTo }
+  propsRef.current = { slide, theme, background, blackout, cleared, logoUrl, showLogo, countdownTo, footer }
+  const fadeRef = useRef(fade)
+  fadeRef.current = fade
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -37,9 +61,33 @@ export default function SlideCanvas({
     let raf = 0
     let disposed = false
 
+    // Cross-fade state: a snapshot of the outgoing frame, faded out on top.
+    const snap = document.createElement('canvas')
+    let lastKey = null
+    let fadeStart = 0
+
     const draw = () => {
       if (disposed) return
+      const key = frameKey(propsRef.current)
+      if (animate && fadeRef.current && lastKey !== null && key !== lastKey && canvas.width > 1) {
+        snap.width = canvas.width
+        snap.height = canvas.height
+        snap.getContext('2d').drawImage(canvas, 0, 0)
+        fadeStart = performance.now()
+      }
+      lastKey = key
       renderSlide(ctx, { ...propsRef.current, onReady: draw })
+      if (fadeStart) {
+        const t = (performance.now() - fadeStart) / FADE_MS
+        if (t >= 1 || snap.width !== canvas.width) {
+          fadeStart = 0
+        } else {
+          ctx.save()
+          ctx.globalAlpha = 1 - t
+          ctx.drawImage(snap, 0, 0)
+          ctx.restore()
+        }
+      }
     }
 
     const resize = () => {
@@ -83,7 +131,7 @@ export default function SlideCanvas({
     const ctx = canvas.getContext('2d')
     const draw = () => renderSlide(ctx, { ...propsRef.current, onReady: draw })
     draw()
-  }, [animate, slide, theme, background, blackout, cleared, logoUrl, showLogo, countdownTo])
+  }, [animate, slide, theme, background, blackout, cleared, logoUrl, showLogo, countdownTo, footer])
 
   return (
     <div ref={wrapRef} className={`slide-canvas ${className}`} style={style}>

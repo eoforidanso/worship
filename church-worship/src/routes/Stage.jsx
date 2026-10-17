@@ -36,6 +36,11 @@ export default function Stage() {
     <div className="stage">
       <header className="stage-head">
         <span className="stage-item">{item ? item.title : '—'}</span>
+        {item && (
+          <span className="stage-pos">
+            {slideIndex + 1} / {item.slides.length}
+          </span>
+        )}
         <span className="stage-flags">
           {blackout && <em className="badge danger">Blackout</em>}
           {cleared && <em className="badge">Cleared</em>}
@@ -48,11 +53,11 @@ export default function Stage() {
 
       <div className="stage-current">
         {slide?.label && <span className="stage-label">{slide.label}</span>}
-        <p>{slide?.body || '—'}</p>
+        <p style={{ fontSize: stageSize(slide?.body) }}>{slide?.body || '—'}</p>
       </div>
 
       <div className="stage-next">
-        <span className="stage-label">Next</span>
+        <span className="stage-label">Next{next?.label ? ` · ${next.label}` : ''}</span>
         <p>{next?.body || 'End of plan'}</p>
       </div>
 
@@ -64,6 +69,16 @@ export default function Stage() {
       )}
     </div>
   )
+}
+
+/** Lyrics stay big; a whole reading on one slide steps down so it still fits. */
+function stageSize(text = '') {
+  const n = text.split(/\s+/).filter(Boolean).length
+  if (n > 160) return '2.9vh'
+  if (n > 100) return '3.5vh'
+  if (n > 60) return '4.3vh'
+  if (n > 30) return '5.6vh'
+  return '7vh'
 }
 
 function useClock() {

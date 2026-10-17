@@ -3,6 +3,7 @@ import SlideCanvas from '../components/SlideCanvas'
 import { useContent, DEFAULT_THEME } from '../store/useContent'
 import { useLive } from '../store/useLive'
 import { useContentSync } from '../lib/useContentSync'
+import { footerFor } from '../lib/render'
 
 /**
  * The projector surface. Open it in a second window and drag it onto the
@@ -48,7 +49,9 @@ export default function Output() {
           showLogo={showLogo}
           logoUrl={logoUrl}
           countdownTo={countdownTo}
+          footer={footerFor(item, slide, theme)}
           animate
+          fade
         />
       </div>
     </div>

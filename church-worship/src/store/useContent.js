@@ -25,6 +25,7 @@ export const DEFAULT_THEME = {
   shadow: true,
   outline: false,
   padding: 120,
+  showFooter: false, // reference line along the bottom (scripture, credits)
   background: { kind: 'color', value: '#0b1020' },
 }
 
@@ -35,6 +36,7 @@ const SCRIPTURE_THEME = {
   fontSize: 52,
   fontWeight: 500,
   align: 'left',
+  showFooter: true,
   background: { kind: 'color', value: '#101418' },
 }
 
@@ -49,7 +51,23 @@ export const makeItem = (type = 'text', overrides = {}) => ({
   background: null, // null => inherit from theme
   slides: [blankSlide()],
   notes: '',
+  autoAdvance: 0, // seconds; > 0 loops the item's slides (announcements, pre-service)
   ...overrides,
+})
+
+/** Deep copy with fresh ids, so a copy never shares slides with its source. */
+const cloneItem = (item, patch = {}) => ({
+  ...item,
+  id: uid('it'),
+  slides: item.slides.map((sl) => ({ ...sl, id: uid('sl') })),
+  ...patch,
+})
+
+const blankPlan = (title = 'New service') => ({
+  id: uid('pl'),
+  title,
+  date: nextSunday(),
+  items: [],
 })
 
 const seedPlan = () => ({
@@ -87,6 +105,8 @@ export const useContent = create(
   persist(
     (set, get) => ({
       plan: seedPlan(),
+      services: [], // saved services, newest first; `plan` is the open one
+      songs: [], // reusable library items (songs, liturgy, standing announcements)
       themes: [DEFAULT_THEME, SCRIPTURE_THEME],
       media: [],
       logoUrl: null,
@@ -107,12 +127,7 @@ export const useContent = create(
           const i = s.plan.items.findIndex((it) => it.id === id)
           if (i === -1) return s
           const src = s.plan.items[i]
-          const copy = {
-            ...src,
-            id: uid('it'),
-            title: `${src.title} (copy)`,
-            slides: src.slides.map((sl) => ({ ...sl, id: uid('sl') })),
-          }
+          const copy = cloneItem(src, { title: `${src.title} (copy)` })
           const items = [...s.plan.items]
           items.splice(i + 1, 0, copy)
           return { plan: { ...s.plan, items } }
@@ -227,6 +242,132 @@ export const useContent = create(
           }
         }),
 
+      /** Replace an item's slides wholesale — scripture lookup uses this. */
+      setSlides: (itemId, slides) =>
+        set((s) => ({
+          plan: {
+            ...s.plan,
+            items: s.plan.items.map((it) =>
+              it.id === itemId ? { ...it, slides: slides.length ? slides : [blankSlide()] } : it,
+            ),
+          },
+        })),
+
+      /**
+       * Put a Mass's readings into the service. Building the same Mass again
+       * replaces the earlier copy in place rather than adding a second set.
+       */
+      insertLectionary: (group, newItems, afterId = null) =>
+        set((s) => {
+          const items = [...s.plan.items]
+          const first = items.findIndex((it) => it.lectionary?.group === group)
+          const kept = items.filter((it) => it.lectionary?.group !== group)
+          let at
+          if (first !== -1) at = first
+          else if (afterId && kept.some((it) => it.id === afterId)) at = kept.findIndex((it) => it.id === afterId) + 1
+          else at = kept.length
+          kept.splice(at, 0, ...newItems)
+          return { plan: { ...s.plan, items: kept } }
+        }),
+
+      // --- services --------------------------------------------------------
+      // One service is open at a time (`plan`). The others are kept whole in
+      // `services`, so last week's order is a click away and next week can
+      // start from it instead of from nothing.
+
+      /** Store the open service in the saved list (upsert by id). */
+      saveService: () =>
+        set((s) => ({ services: upsert(s.services, { ...s.plan, savedAt: Date.now() }) })),
+
+      openService: (id) =>
+        set((s) => {
+          const target = s.services.find((p) => p.id === id)
+          if (!target || target.id === s.plan.id) return s
+          return {
+            services: upsert(s.services, { ...s.plan, savedAt: Date.now() }),
+            plan: stripSaved(target),
+          }
+        }),
+
+      /**
+       * Start a new service. `fromId` uses a saved service (or the open one)
+       * as the template: same order, fresh ids, so editing the new one never
+       * touches the original.
+       */
+      newService: (fromId = null) =>
+        set((s) => {
+          const all = [s.plan, ...s.services.filter((p) => p.id !== s.plan.id)]
+          const src = fromId ? all.find((p) => p.id === fromId) : null
+          const next = blankPlan(src ? src.title : 'New service')
+          if (src) next.items = src.items.map((it) => cloneItem(it))
+          return {
+            services: upsert(s.services, { ...s.plan, savedAt: Date.now() }),
+            plan: next,
+          }
+        }),
+
+      deleteService: (id) =>
+        set((s) => ({ services: s.services.filter((p) => p.id !== id || p.id === s.plan.id) })),
+
+      // --- library ---------------------------------------------------------
+
+      /** Save a plan item to the library, updating its earlier copy if any. */
+      saveToLibrary: (itemId) =>
+        set((s) => {
+          const item = s.plan.items.find((it) => it.id === itemId)
+          if (!item) return s
+          const libId = item.libraryId ?? uid('lib')
+          const entry = { ...item, id: libId, libraryId: undefined, savedAt: Date.now() }
+          return {
+            songs: upsert(s.songs, entry),
+            plan: {
+              ...s.plan,
+              items: s.plan.items.map((it) => (it.id === itemId ? { ...it, libraryId: libId } : it)),
+            },
+          }
+        }),
+
+      /** Copy a library entry into the open service, after `afterId` if given. */
+      addFromLibrary: (libId, afterId = null) => {
+        const src = get().songs.find((x) => x.id === libId)
+        if (!src) return null
+        const item = cloneItem(src, { libraryId: libId })
+        delete item.savedAt
+        set((s) => {
+          const items = [...s.plan.items]
+          const at = afterId ? items.findIndex((it) => it.id === afterId) + 1 : items.length
+          items.splice(at || items.length, 0, item)
+          return { plan: { ...s.plan, items } }
+        })
+        return item.id
+      },
+
+      updateLibraryEntry: (libId, patch) =>
+        set((s) => ({ songs: s.songs.map((x) => (x.id === libId ? { ...x, ...patch } : x)) })),
+
+      removeFromLibrary: (libId) => set((s) => ({ songs: s.songs.filter((x) => x.id !== libId) })),
+
+      /**
+       * Merge an exported file. Services and library entries keep their ids so
+       * importing the same file twice updates rather than duplicates; themes
+       * and media are added only when missing.
+       */
+      importBundle: (bundle) =>
+        set((s) => {
+          const themes = [...s.themes]
+          for (const t of bundle.themes ?? []) if (!themes.some((x) => x.id === t.id)) themes.push(t)
+          const media = [...s.media]
+          for (const m of bundle.media ?? []) if (!media.some((x) => x.id === m.id)) media.push(m)
+          let songs = s.songs
+          for (const x of bundle.songs ?? []) songs = upsert(songs, x)
+          let services = s.services
+          for (const p of bundle.services ?? []) {
+            if (p.id === s.plan.id) continue // never overwrite the open service underneath the operator
+            services = upsert(services, p)
+          }
+          return { themes, media, songs, services }
+        }),
+
       // --- themes ----------------------------------------------------------
       addTheme: (base) => {
         const theme = { ...(base ?? DEFAULT_THEME), id: uid('th'), name: 'New theme' }
@@ -270,11 +411,26 @@ export const useContent = create(
     }),
     {
       name: 'worship-content-v1',
+      version: 1,
+      // v0 → v1: services and library arrived, and the Scripture theme gained
+      // a reference footer. Earlier saves get both without losing anything.
+      migrate: (state, from) => {
+        if (from < 1) {
+          state.services ??= []
+          state.songs ??= []
+          state.themes = (state.themes ?? []).map((t) =>
+            t.id === SCRIPTURE_THEME.id && t.showFooter == null ? { ...t, showFooter: true } : t,
+          )
+        }
+        return state
+      },
       // Only metadata lives here. The bytes are Blobs in IndexedDB (see
       // lib/mediaStore.js) and `url` is a per-session object URL, so persisting
       // it would just store a dead reference.
       partialize: (s) => ({
         plan: s.plan,
+        services: s.services,
+        songs: s.songs,
         themes: s.themes,
         logoId: s.logoId,
         logoUrl: s.logoUrl?.startsWith('blob:') ? null : s.logoUrl,
@@ -283,6 +439,26 @@ export const useContent = create(
     },
   ),
 )
+
+function upsert(list, entry) {
+  const i = list.findIndex((x) => x.id === entry.id)
+  if (i === -1) return [entry, ...list]
+  const out = [...list]
+  out[i] = entry
+  return out
+}
+
+function stripSaved({ savedAt, ...plan }) {
+  return plan
+}
+
+function nextSunday() {
+  const d = new Date()
+  d.setDate(d.getDate() + ((7 - d.getDay()) % 7))
+  // Local date, not toISOString — that's UTC, and Saturday night prep would
+  // land on the wrong day.
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 function defaultTitle(type) {
   return (
