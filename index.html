@@ -30,7 +30,15 @@
           radial-gradient(ellipse 85% 75% at 50% 42%, #1d2f5c 0%, #142246 38%, #0b1022 78%, #070a17 100%);
         color: #f6de96;
         font-family: 'EB Garamond', Georgia, 'Times New Roman', serif;
-        transition: opacity 0.5s ease;
+        transition: opacity 0.325s ease;
+      }
+      /* Launch → sign → app: while the sign is up the app waits unseen beneath
+         it, then the two cross-fade together, so there is no screen change. */
+      html.splashing #root {
+        opacity: 0;
+      }
+      html.fading #root {
+        transition: opacity 0.325s ease;
       }
       /* Soft rays from above, as through a high window: felt more than seen. */
       #splash::before {
@@ -188,13 +196,18 @@
       ;(function () {
         var s = document.getElementById('splash')
         if (/\/(output|stage)\/?$/.test(location.pathname)) return s.remove()
+        var html = document.documentElement
+        html.classList.add('splashing', 'fading')
         var t0 = Date.now()
         var hide = function () {
           if (!s.isConnected || s.classList.contains('gone')) return
+          // Both at once, 325 ms: the sign fades out as the app fades in.
           s.classList.add('gone')
+          html.classList.remove('splashing')
           setTimeout(function () {
             s.remove()
-          }, 500)
+            html.classList.remove('fading')
+          }, 360)
         }
         var HOLD = 10000 // the sign stays for ten seconds…
         // …but once the app is ready, a tap, click or key lets anyone in at once.
