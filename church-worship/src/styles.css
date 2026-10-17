@@ -348,7 +348,8 @@ input[type='range'] {
   padding: 6px 10px;
   border-radius: 9px;
   border: 1px solid transparent;
-  color: var(--muted);
+  /* Brighter than --muted: inactive labels must read on projectors, sanctuary screens and in bright rooms. */
+  color: #b9c3cf;
   text-decoration: none;
   white-space: nowrap;
   transition:
@@ -374,11 +375,44 @@ input[type='range'] {
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     inset 0 -1px 0 rgba(0, 0, 0, 0.25),
     0 2px 4px rgba(0, 0, 0, 0.35),
-    0 0 12px rgba(214, 172, 74, 0.12);
+    0 0 18px rgba(232, 178, 92, 0.16);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   -webkit-backdrop-filter: blur(10px) saturate(160%);
   backdrop-filter: blur(10px) saturate(160%);
   transform: translateY(-1px);
+}
+/* Candlelight, not LED: a warm pool of light spills from the open tab onto
+   the tray and over its neighbours, and the glow breathes
+   very slowly. Felt more than seen. */
+.tab.active::before {
+  content: '';
+  position: absolute;
+  inset: -6px -60%;
+  z-index: -1;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse 50% 60% at 50% 70%,
+    rgba(240, 180, 90, 0.16) 0%,
+    rgba(240, 180, 90, 0.06) 45%,
+    transparent 75%
+  );
+  pointer-events: none;
+  animation: candle 9s ease-in-out infinite;
+}
+.tabs {
+  isolation: isolate; /* keeps the candle glow behind the tabs, inside the tray */
+}
+@keyframes candle {
+  0%,
+  100% {
+    opacity: 0.85;
+  }
+  40% {
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.9;
+  }
 }
 .tab.active::after {
   content: '';
@@ -401,6 +435,9 @@ input[type='range'] {
   .tab:active {
     transition: none;
     transform: none;
+  }
+  .tab.active::before {
+    animation: none;
   }
 }
 
