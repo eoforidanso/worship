@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import SlideCanvas from '../components/SlideCanvas'
-import { useContent, DEFAULT_THEME } from '../store/useContent'
+import { useContent, DEFAULT_THEME, SERIF } from '../store/useContent'
 
 const SAMPLE = {
   id: 'sample',
@@ -9,6 +9,7 @@ const SAMPLE = {
 }
 
 const FONTS = [
+  SERIF,
   "'Inter', system-ui, sans-serif",
   "Georgia, 'Times New Roman', serif",
   "'Helvetica Neue', Helvetica, Arial, sans-serif",
@@ -46,7 +47,7 @@ export default function ThemeEditor() {
       </div>
 
       <div className="theme-preview">
-        <SlideCanvas slide={SAMPLE} theme={theme} />
+        <SlideCanvas slide={SAMPLE} theme={theme} footer={theme.showFooter ? 'Amazing Grace · John Newton' : ''} />
       </div>
 
       <div className="theme-controls">
@@ -69,7 +70,7 @@ export default function ThemeEditor() {
         <Range label="Size" min={24} max={140} value={theme.fontSize} onChange={(v) => set({ fontSize: v })} />
         <Range
           label="Weight"
-          min={300}
+          min={400}
           max={900}
           step={100}
           value={theme.fontWeight}
@@ -123,6 +124,7 @@ export default function ThemeEditor() {
           <Toggle label="Uppercase" value={theme.uppercase} onChange={(v) => set({ uppercase: v })} />
           <Toggle label="Shadow" value={theme.shadow} onChange={(v) => set({ shadow: v })} />
           <Toggle label="Outline" value={theme.outline} onChange={(v) => set({ outline: v })} />
+          <Toggle label="Reference footer" value={!!theme.showFooter} onChange={(v) => set({ showFooter: v })} />
         </div>
 
         {theme.id !== DEFAULT_THEME.id && (

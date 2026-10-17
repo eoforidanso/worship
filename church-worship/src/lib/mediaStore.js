@@ -118,6 +118,11 @@ export async function hydrateAll() {
   return ids
 }
 
+/** The stored record (blob plus name and type), or null. Used by export. */
+export async function getRecord(id) {
+  return (await tx('readonly', (store) => store.get(id))) ?? null
+}
+
 export async function deleteMedia(id) {
   const url = urls.get(id)
   if (url) {

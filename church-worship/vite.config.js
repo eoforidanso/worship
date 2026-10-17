@@ -34,28 +34,56 @@ export default defineConfig({
       injectRegister: false, // src/lib/pwa.js registers it, so the UI can prompt
       includeAssets: ['apple-touch-icon.png'],
       manifest: {
-        name: 'Church Worship',
-        short_name: 'Worship',
-        description: 'Plan the service, compose the slides, drive the projector.',
+        id: `${base}live`,
+        name: 'Church Worship — Mass projection',
+        short_name: 'Church Worship',
+        description:
+          'Project the Mass: the day’s readings from the Lectionary, the Order of Mass with its prayers, hymns and parish announcements. Works offline.',
         start_url: `${base}live`,
         scope: base,
         display: 'standalone',
-        orientation: 'landscape',
+        display_override: ['standalone', 'minimal-ui'],
+        orientation: 'any',
         background_color: '#0d1117',
         theme_color: '#0d1117',
+        categories: ['productivity', 'utilities'],
         icons: [
-          { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
+          { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
+        // Right-click the dock / taskbar icon to jump straight to these.
+        shortcuts: [
           {
-            src: 'icon-maskable-512.png',
-            sizes: '512x512',
-            type: 'image/png',
-            purpose: 'maskable',
+            name: 'Live',
+            short_name: 'Live',
+            url: `${base}live`,
+            icons: [{ src: 'icon-192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Readings of the day',
+            short_name: 'Readings',
+            url: `${base}readings`,
+            icons: [{ src: 'icon-192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Announcements',
+            short_name: 'Notices',
+            url: `${base}announcements`,
+            icons: [{ src: 'icon-192.png', sizes: '192x192' }],
+          },
+          {
+            name: 'Projector output',
+            short_name: 'Output',
+            url: `${base}output`,
+            icons: [{ src: 'icon-192.png', sizes: '192x192' }],
           },
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,svg,woff,woff2}'],
+        globPatterns: ['**/*.{js,mjs,css,html,png,svg,woff,woff2}'],
+        // pdf.js (PDF import) is ~2MB; still precached so a PDF can be added offline.
+        maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
         // Every surface is a client-side route: /live, /compose/:id, /media,
         // /themes, /output, /stage. Offline, none of them exist as files, so
         // navigations fall back to the cached shell and the router takes over.

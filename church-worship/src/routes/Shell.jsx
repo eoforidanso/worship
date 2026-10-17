@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import ServicePlanner from '../components/ServicePlanner'
-import { useLive } from '../store/useLive'
+import { useLive, useCue } from '../store/useLive'
 import { useContent } from '../store/useContent'
 import { subscribeStatus } from '../lib/broadcast'
-import { subscribePwa, applyUpdate, dismissOfflineReady } from '../lib/pwa'
+import { subscribePwa, applyUpdate, dismissOfflineReady, promptInstall, installHelp } from '../lib/pwa'
+import { describeDay } from '../lib/lectionary'
 
 const TABS = [
   { to: '/live', label: 'Live' },
+  { to: '/readings', label: 'Readings' },
+  { to: '/prayers', label: 'Prayers' },
+  { to: '/announcements', label: 'Announcements' },
+  { to: '/library', label: 'Services' },
   { to: '/compose', label: 'Compose' },
   { to: '/media', label: 'Media' },
   { to: '/themes', label: 'Themes' },
@@ -17,8 +22,12 @@ export default function Shell() {
   const navigate = useNavigate()
   const planTitle = useContent((s) => s.plan.title)
   const setPlanTitle = useContent((s) => s.setPlanTitle)
+  const planDate = useContent((s) => s.plan.date)
+  const planId = useContent((s) => s.plan.id)
+  const setPlanDate = useContent((s) => s.setPlanDate)
 
   useGlobalShortcuts()
+  useAutoAdvance()
   const status = useConnectionStatus()
 
   return (
@@ -32,6 +41,14 @@ export default function Shell() {
             onChange={(e) => setPlanTitle(e.target.value)}
             aria-label="Service title"
           />
+          <input
+            className="plan-date"
+            type="date"
+            value={planDate ?? ''}
+            onChange={(e) => setPlanDate(e.target.value)}
+            aria-label="Service date"
+          />
+          <LiturgicalDay date={planDate} planId={planId} onOpen={() => navigate('/readings')} />
         </div>
 
         <nav className="tabs">
@@ -46,6 +63,7 @@ export default function Shell() {
           <span className={`conn conn-${status}`} title={`Sync: ${status}`}>
             {status === 'online' ? 'Network sync' : 'Local only'}
           </span>
+          <InstallButton />
           <button className="btn" onClick={() => openWindow('/stage', 'stage')}>
             Stage
           </button>
@@ -66,6 +84,71 @@ export default function Shell() {
         </main>
       </div>
     </div>
+  )
+}
+
+/** What the Church celebrates on the service date, from the built-in calendar. */
+function LiturgicalDay({ date, planId, onOpen }) {
+  const [info, setInfo] = useState(null)
+  const setAutoTitle = useContent((s) => s.setAutoTitle)
+  useEffect(() => {
+    let live = true
+    setInfo(null)
+    if (date)
+      describeDay(date)
+        .then((d) => {
+          if (!live) return
+          setInfo(d)
+          if (d) setAutoTitle(d.name) // only while the service hasn't been named by hand
+        })
+        .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [date, planId, setAutoTitle]) // a new service on the same date gets named too
+  if (!info) return null
+  return (
+    <button className="lit-day" onClick={onOpen} title={`${info.name} · ${info.cycle} — open the readings`}>
+      <span className={`lit-dot lit-${info.color}`} />
+      <span className="lit-day-name">{info.name}</span>
+      <span className="muted">{info.cycle}</span>
+    </button>
+  )
+}
+
+/**
+ * Install the app on this computer: its own window and dock/Start-menu icon,
+ * opening straight onto Live, working with no network. One click where the
+ * browser allows it; otherwise the steps for this browser.
+ */
+function InstallButton() {
+  const [{ canInstall, installed }, setPwa] = useState({ canInstall: false, installed: false })
+  const [help, setHelp] = useState(false)
+  useEffect(() => subscribePwa(setPwa), [])
+  if (installed) return null
+  return (
+    <span className="install">
+      <button
+        className="btn"
+        title="Install as an app on this computer"
+        onClick={() => (canInstall ? promptInstall() : setHelp((v) => !v))}
+      >
+        ⤓ Install app
+      </button>
+      {help && (
+        <span className="install-help" role="dialog">
+          <strong>Install Church Worship</strong>
+          <span>{installHelp()}</span>
+          <span className="muted small">
+            Installed, it opens in its own window from the dock or Start menu, straight onto Live, and runs
+            with no internet.
+          </span>
+          <button className="btn btn-sm" onClick={() => setHelp(false)}>
+            OK
+          </button>
+        </span>
+      )}
+    </span>
   )
 }
 
@@ -117,6 +200,29 @@ function useConnectionStatus() {
 }
 
 /**
+ * Items with `autoAdvance` set (announcements, a pre-service loop) step
+ * through their slides on a timer and wrap round, never leaving the item. It
+ * runs here in the shell, not on the Live tab, so switching tabs mid-loop
+ * doesn't stop it; it pauses while the screen is blacked out, cleared or on
+ * the logo.
+ */
+function useAutoAdvance() {
+  const { itemId, slideIndex, blackout, cleared, showLogo } = useLive()
+  const item = useContent((s) => s.plan.items.find((it) => it.id === itemId) ?? null)
+  const seconds = item?.autoAdvance ?? 0
+  const count = item?.slides.length ?? 0
+
+  useEffect(() => {
+    if (!itemId || seconds <= 0 || count < 2 || blackout || cleared || showLogo) return
+    const t = setTimeout(() => {
+      const live = useLive.getState()
+      if (live.itemId === itemId) live.push({ slideIndex: (live.slideIndex + 1) % count })
+    }, seconds * 1000)
+    return () => clearTimeout(t)
+  }, [itemId, slideIndex, seconds, count, blackout, cleared, showLogo])
+}
+
+/**
  * Operator keyboard control. Ignored while a text field has focus so typing
  * lyrics never advances the projector.
  */
@@ -124,12 +230,35 @@ function useGlobalShortcuts() {
   useEffect(() => {
     const onKey = (e) => {
       const el = document.activeElement
-      const typing =
-        el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
+      const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return
 
       const live = useLive.getState()
+
+      // 1–9: put that slide of the cued item on screen.
+      if (/^[1-9]$/.test(e.key)) {
+        const id = useCue.getState().itemId ?? live.itemId
+        const item = useContent.getState().plan.items.find((it) => it.id === id)
+        const i = Number(e.key) - 1
+        if (item && i < item.slides.length) {
+          e.preventDefault()
+          live.goTo(item.id, i)
+        }
+        return
+      }
+
       switch (e.key) {
+        case 'Enter': {
+          // Take the cued item live — but only from the plan, never from a
+          // focused button, where Enter already means "press this".
+          if (el && el.tagName === 'BUTTON') return
+          const id = useCue.getState().itemId
+          if (id && id !== live.itemId) {
+            e.preventDefault()
+            live.goTo(id, 0)
+          }
+          break
+        }
         case 'ArrowRight':
         case 'ArrowDown':
         case 'PageDown':

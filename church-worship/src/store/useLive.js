@@ -84,6 +84,24 @@ export const useLive = create((set, get) => ({
   reset: () => get().push({ ...initial }),
 }))
 
+/**
+ * What the operator has picked in the plan but not yet sent to the screen.
+ *
+ * Operator-window only, never broadcast. Picking an item in the plan cues it
+ * — its slides fill the grid — and nothing reaches the projector until a
+ * slide is clicked. A stray click (or the first half of the double-click that
+ * opens the editor) can no longer put the wrong thing in front of the room.
+ */
+export const useCue = create((set) => ({
+  itemId: null,
+  cue: (itemId) => set({ itemId }),
+}))
+
+// When the live item moves on (Next past the last slide), the grid follows.
+useLive.subscribe((s, prev) => {
+  if (s.itemId && s.itemId !== prev.itemId) useCue.setState({ itemId: s.itemId })
+})
+
 // Follow whatever the operator window sends.
 subscribe((msg) => {
   if (msg.type === 'live') useLive.getState().apply(msg.payload)

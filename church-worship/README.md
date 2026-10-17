@@ -1,7 +1,9 @@
 # Church Worship
 
-Presentation software for a church service, in the shape of EasyWorship: plan the
-service, compose the slides, then drive the projector live.
+Presentation software for a Catholic parish, in the shape of EasyWorship: plan
+the Mass, compose the slides, then drive the projector live. The Lectionary is
+built in — pick a date and the day's readings arrive in the service, in the
+right cycle, ready to project.
 
 ## Running it
 
@@ -26,14 +28,214 @@ npm run server
 
 | Surface | Where | What it does |
 | --- | --- | --- |
-| **Service Planner** | left rail, always visible | Drag-and-drop the running order. Click an item to take it live, double-click to edit. |
+| **Service Planner** | left rail, always visible | Drag-and-drop the running order. Click an item to **cue** it (nothing changes on screen), double-click to edit. ☆ saves it to the library. |
+| **Readings** | `/readings` | The Lectionary for Mass by date: the celebration, Year A/B/C and I/II, the Mass options, and every reading — added to the service in one click. |
+| **Prayers** | `/prayers` | The people's parts of the Order of Mass — traditional English, Latin, or your missal's wording pasted once. |
+| **Announcements** | `/announcements` | Parish notices kept week to week, each with an optional end date; added to the Mass after Communion or as a loop before Mass. |
+| **Services** | `/library` | Every saved service, newest first — open one, or start next week's as a copy. The song library, searchable by title, author or lyric. Export / import / back up. |
 | **Slide Composer** | `/compose/:itemId` | Edit slide text, labels, theme and background. Paste a whole song and have it split into slides. |
 | **Media Browser** | `/media` | Grid of images and video with tags and search. Drop files onto it. Star an image to make it the logo. |
-| **Live Controller** | `/live` | Live and next preview, slide grid, transport, blackout / clear / logo, countdown, stage messages. |
+| **Live Controller** | `/live` | Live and next preview, the cued item's slide grid, transport, blackout / clear / logo, countdown, stage messages. |
 | **Stage Display** | `/stage`, own window | Current and next lyrics for the worship team, plus clock, countdown, notes and operator messages. |
 
 The **Output** window (`/output`) is what the congregation sees. Open it with the
 button in the top bar, drag it to the projector, double-click for fullscreen.
+
+## Mass readings
+
+Open **Readings** (or, on an empty service, press *✠ Add this day's Mass* in
+the plan). It opens
+on the service's date; the top bar shows the same day — "29th Sunday of
+Ordinary Time · Year A" — next to the date.
+
+- **The calendar decides.** Sundays follow Year A, B or C; weekdays Year I or
+  II; solemnities and feasts replace the Sunday or weekday when they should
+  (Christmas, the Assumption, All Saints, Saints Peter and Paul…); transfers
+  are handled (the Annunciation out of Holy Week, the Immaculate Conception off
+  an Advent Sunday). **Epiphany, the Ascension and Corpus Christi are kept on
+  Sunday.** 2025–2040 are built in; later years are fetched once and kept.
+- **Pick the Mass** where there is a choice: on a memorial, the weekday's
+  readings or the saint's; on Saturday, the evening Mass of Sunday; Christmas
+  (Night, Dawn, Day), Easter (Day, Evening), Pentecost and the other vigils,
+  the three sets for All Souls.
+- **Pick the readings.** Untick any part. Where the lectionary gives a choice
+  — the longer or shorter Gospel, alternative first readings — choose it.
+  Type the **psalm response** (it is not part of the citation); it goes before
+  the psalm and after every stanza, and is remembered for next time.
+- **Add readings to service.** Each part becomes its own item, in order —
+  optional title slide, First Reading, Responsorial Psalm, Second Reading,
+  Gospel Acclamation, Gospel. Building the same Mass again replaces it in
+  place.
+- **One screen per reading** (the default). Each reading appears whole, so
+  nobody presses Next while it is proclaimed; what it is and where it's from
+  run along the bottom ("Gospel · Matthew 22:15-21"). The psalm shows the
+  response on top and every stanza below. Only a reading too long to read
+  from the pews (over ~220 words: the Passion, some Easter Vigil readings) is
+  split, into the fewest even screens — a typical Sunday is one screen per
+  reading.
+- **A few verses at a time** is the other choice under *On screen*: a heading
+  slide ("A reading from the Book of the Prophet Isaiah"), a few verses per
+  slide, and the closing dialogue ("The word of the Lord. / Thanks be to
+  God."); the psalm stanza by stanza with the response between.
+
+## The whole Mass
+
+On the Readings page, **Add: Whole Mass** (the default) builds the entire
+Order of Mass with the day's readings in their place — one item per part,
+one screen each:
+
+Entrance Hymn · Sign of the Cross and Greeting · Penitential Act · Kyrie ·
+Gloria · *the readings* · Before the Gospel ("…according to Matthew. /
+Glory to you, O Lord.") · Gospel · Creed · Universal Prayer · Offertory Hymn
+· Pray, Brethren · Preface Dialogue · Holy, Holy, Holy · Mystery of Faith ·
+Doxology · The Lord's Prayer · Sign of Peace · Lamb of God · Behold the Lamb
+of God · Communion Hymn · Blessing and Dismissal · Recessional Hymn
+
+- **Gloria and Creed follow the day**: Gloria on Sundays outside Advent and
+  Lent, on solemnities and feasts, Holy Thursday and the Easter Octave; Creed
+  on Sundays and solemnities. The checkboxes show what was decided and can be
+  changed. Pick the Nicene or Apostles' Creed and the Mystery of Faith
+  acclamation there too.
+- **Hymn places**: four empty song items. Select one, type in *Add from
+  library…* and the song takes that place. Rebuilding the Mass keeps the
+  hymns already chosen.
+- **Good Friday** has no Mass; only its readings are added.
+- The priest's prayers that change every day (Collect, Prayer over the
+  Offerings, Preface, Eucharistic Prayer) are not projected.
+
+**The wording.** The **Prayers** page sets each prayer to *Traditional
+English* (the long-standing public-domain Catholic texts — "Glory be to God
+on high…", "I believe in one God…", "Lord, I am not worthy that thou
+shouldst enter under my roof…" — and plain renderings of the Latin where the
+text is newer), *Latin* (the Missale Romanum), or *Our missal*. The current
+English translation of the Roman Missal (© ICEL) is licensed through each
+bishops' conference, so it can't ship in a public app: paste it once under
+*Our missal* and it is used at every Mass and saved in every backup file.
+Lines starting `R.` are the people's.
+
+**The text.** Readings fill in from the **Douay-Rheims** Bible — public domain,
+and the free English Catholic Bible that has every book the Lectionary uses
+(Sirach, Wisdom, Baruch, Tobit, Maccabees). Its English is older than the
+lectionary at the ambo. For any reading choose **Paste** and paste your own
+lectionary's text instead: it goes on one screen the same way, split at
+sentence ends only if very long (psalms: blank line between stanzas, a line
+starting `R.` is the response). The same
+*Paste reading…* is in the composer for any scripture item.
+
+Douay-Rheims follows the Vulgate's numbering and the Lectionary the Hebrew;
+the app converts between them (most Psalms, Joel, Malachi, Hosea, Micah, parts
+of Isaiah, Zechariah, John 6 and others), so the slides show the citation as
+it is printed in the lectionary. For Sirach, Tobit, Judith and Esther, where
+the Vulgate text itself differs, the item says to compare with the lectionary.
+
+**Network.** The calendar and every citation are in the app. Only the
+Douay-Rheims text is fetched — at prep time — and it is then saved with the
+service, so Mass runs with the network off.
+
+## Running a service
+
+**Made for a laptop at the back of church.** The Stage and Output buttons
+are always in the top bar (the tabs wrap to a second row on a small
+screen). Previous, Next and Blackout stay on screen without scrolling. The
+plan shows each part on one line under the headings of the Mass —
+Introductory Rites, Liturgy of the Word, … — and scrolls itself to keep the
+live part in view. Before Mass starts, *Next* and the stage display show
+what the first press will put up. A new service is named after its
+liturgical day ("29th Sunday of Ordinary Time") until you type a name.
+*Clear* empties the plan.
+
+**Announcements.** Keep the parish notices in the *Announcements* tab — a
+title and a few lines each, or a poster as a picture (choose a file or paste
+one). Give a notice an *Until* date and it stops showing after that day; untick
+*Show* to hold one back. *Add to service* puts one slide per notice either
+**after Communion** (just before the Blessing and Dismissal, where notices are
+given) or **before Mass, on a loop** that changes every few seconds. Adding
+again replaces the notices already in the service. Notices are saved, and
+travel in *Back up everything* files with their pictures.
+
+**Paste or add files.** *⊕ Paste or file* under the plan (or drop files
+anywhere on the plan) brings in outside content, after the selected item:
+
+| What | Becomes |
+| --- | --- |
+| Pasted text, `.txt` | Slides — a blank line starts a new one, `[Verse 1]` labels one |
+| A picture (pasted from the clipboard, or a file) | One slide each, shown whole, never cropped |
+| A PDF | One slide per page, each page as a picture, so its layout is kept |
+| Word, PowerPoint | Not read directly — save as PDF first |
+
+Pictures and PDF pages go into the offline media library, so they project
+with the network off and travel inside exported service files.
+
+**Cue, then go live.** Clicking an item in the plan fills the slide grid but
+doesn't touch the projector — the grid says *Cued — not on screen*. Click a
+slide (or press `Enter`, or `1`–`9`) to put it up. A stray click, or the first
+half of the double-click that opens the editor, can't put the wrong thing in
+front of the room.
+
+**Services.** One service is open at a time. *Services* keeps the
+rest; *New from this one* copies the order into a fresh service dated next
+Sunday. Opening or creating a service saves the current one first.
+
+**Song library.** ☆ on a plan item (or *Save to library* in the composer)
+keeps a copy. Type in *Add from library…* under the plan to drop it in after
+the cued item. ★ means it came from the library; pressing it updates the
+library copy with your edits.
+
+**Scripture.** In the composer, *Look up scripture…* fetches any passage —
+Douay-Rheims by default, or KJV, WEB, ASV, BBE and other public-domain
+translations from bible-api.com — one
+to four verses per slide, each slide with its own reference (`John 3:17 ·
+KJV`) along the bottom. It needs the network **during prep only** — the verses
+are saved into the service like any typed slide.
+
+**Announcements loop.** Set *Auto-advance* on an item and it steps through
+its slides on a timer and wraps round, staying on that item. It pauses during
+blackout, clear and logo.
+
+**Transitions.** The projector and live preview cross-fade (350ms) between
+slides and into blackout or the logo, instead of hard-cutting.
+
+**Typeface.** Slides are set in **EB Garamond** (SIL Open Font License), the
+classic book face of missals and Bibles, in semibold so it holds up on a
+projector. It is bundled with the app — no font is fetched at Mass — and the
+app waits for it before drawing, so a slide never flashes in a fallback
+font. Other fonts are in the Themes tab; Twi and Fante letters such as ɛ and
+ɔ fall back to a system font if the theme's font lacks them.
+
+**Footers.** Themes have a *Reference footer* toggle (on for Scripture). It
+shows the slide's own footer, else the item's title and subtitle — good for
+song credits too.
+
+**Moving between laptops.** *Export this service* writes one
+`.worship.json` file with the plan, its themes and its media inside;
+*Import…* on the projection laptop merges it. *Back up everything* does the
+same for every service, the library and all media. Re-importing the same file
+updates rather than duplicates.
+
+## Installing it as an app
+
+Press **⤓ Install app** in the top bar. In Chrome and Edge that installs it in
+one click; in Safari (Mac) it's *File → Add to Dock*, on an iPad *Share → Add
+to Home Screen* — the button shows the steps for the browser you're in. Once
+installed it:
+
+- has its own icon (a gold cross) in the dock, Launchpad or Start menu, and
+  opens in its own window straight onto **Live** — no browser tabs or address
+  bar in front of the congregation;
+- runs with **no internet and no server**: the readings calendar, lectionary,
+  prayers, font and PDF reader are all inside;
+- offers shortcuts on its icon (right-click): Live, Readings of the day,
+  Announcements, Projector output.
+
+Install from the hosted copy (an `https://` address) or from `localhost`
+while the app is running; after that the installed app no longer needs either.
+The button disappears once the app is installed. Icons are drawn by
+`scripts/make-icons.py`.
+
+Verified in Chrome: service worker active with 42 files cached, Chrome
+reports the app installable with no manifest errors, and with the network
+off `/live`, `/readings` (showing the day from the built-in calendar),
+`/prayers`, `/announcements`, `/output` and `/stage` all open.
 
 ## Working offline
 
@@ -100,8 +302,8 @@ Three things to know:
   window; nothing reloads until you click it. An unannounced reload mid-song
   would be worse than running last week's build.
 - **The plan is in `localStorage`** and the media in IndexedDB — both are
-  per-browser and per-machine. Nothing syncs between laptops; carry the service
-  on the machine that will run it.
+  per-browser and per-machine. Nothing syncs between laptops on its own — use
+  Export / Import to carry a service to the machine that will run it.
 - **Media added by URL is the one thing not guaranteed offline.** It's fetched
   over the network and shows a grey dot. Drop the file in instead to make it
   green.
@@ -111,6 +313,8 @@ Three things to know:
 | Key | Action |
 | --- | --- |
 | `→` `↓` `Space` `PgDn` | Next slide |
+| `1`–`9` | Put that slide of the cued item on screen |
+| `Enter` | Take the cued item live from its first slide |
 | `←` `↑` `PgUp` | Previous slide |
 | `B` | Blackout |
 | `C` | Clear text, keep the background |
@@ -127,7 +331,19 @@ src/
   lib/render.js        one canvas renderer, used by every preview and the output
   lib/broadcast.js     BroadcastChannel + optional WebSocket, with reconnect
   store/useContent.js  plan, slides, themes, media — persisted to localStorage
-  store/useLive.js     what is on screen right now — deliberately not persisted
+  store/useLive.js     what is on screen right now — deliberately not persisted;
+                       also the operator-only cue
+  lib/scripture.js     passage lookup → slides (composer)
+  lib/lectionary.js    date → celebration, cycles, Mass options, readings
+  lib/bible.js         citation parser, Hebrew→Vulgate numbering, Douay-Rheims fetch
+  lib/massBuilder.js   readings → plan items, the way they are proclaimed
+  lib/orderOfMass.js   the whole Mass: Order of Mass + readings + hymn places
+  data/orderOfMass.js  the people's parts, traditional English and Latin, Gloria/Creed rules
+  data/                lectionary.json, calendar/2025–2040, NOTICE.md (sources, licences)
+scripts/               build-lectionary.py, fetch-calendar.mjs — regenerate data/
+  lib/bundle.js        .worship.json export / import, media included
+  lib/importer.js      pasted text, .txt, PDFs (pdf.js) and pictures → plan items
+  lib/announcements.js parish notices → the Announcements item
   routes/              Shell, LiveController, SlideComposer, MediaBrowser,
                        ThemeEditor, Output, Stage
   components/          ServicePlanner (dnd-kit), SlideCanvas
@@ -147,16 +363,43 @@ re-project a slide on its own.
 
 ## Limits
 
-- **No scripture lookup.** Scripture items are typed or pasted; wiring in an API
-  or a local Bible database is the obvious next step.
-- **Nothing syncs between machines.** The plan and the media live in the
-  browser that created them. Moving a service to another laptop means
-  re-importing it there.
+- **Readings need the network at prep time** to fetch the Douay-Rheims text,
+  and only public-domain text is built in. The lectionary translations used at
+  the ambo (Jerusalem Bible, NABRE, RSV-CE) are copyrighted — paste them,
+  under your parish's licence.
+- **Psalm responses and Lenten acclamations** aren't in the citations, so the
+  operator types them (once — responses are remembered).
+- **16 optional memorials have no proper readings** in the data (e.g. St Rita,
+  St Pio); those days use the weekday's readings, which is the usual practice.
+- **National and diocesan feasts** are not in the calendar — the General Roman
+  Calendar only. Add a parish's own feast as a normal item.
+- **Nothing syncs between machines automatically.** Carry a service across
+  with Export / Import.
 - **Video has no audio path.** Video backgrounds are drawn to the canvas muted
   (autoplay requires it, and slides carry no sound). Audio tracks as a media
   type aren't implemented.
 - **The relay is unauthenticated.** It's fine on a closed church LAN and not fine
   anywhere else.
+
+## Updating the lectionary data
+
+`src/data/` is generated; see `src/data/NOTICE.md` for sources and licences.
+
+```bash
+node scripts/fetch-calendar.mjs 2041 2050
+```
+
+To rebuild `lectionary.json` (e.g. once the Liturgical Calendar Project
+completes Years B and C upstream), download its `rite/roman/lectionary/*/en.json`
+files, the Tamil lectionary's `readings__list.sql` (as `tamil_list.sql`) and
+the calendar years (as `cal/YYYY.json`) into one folder, then:
+
+```bash
+python3 scripts/build-lectionary.py ./sources src/data/lectionary.json
+```
+
+It prints how many parts the two sources agree on, what it filled and what is
+still empty.
 
 ## Verification status
 
@@ -175,5 +418,26 @@ the operator preview and the Output window. Deleting the stored bytes while
 leaving the plan intact was tested too — the slide falls back to the theme
 colour with the words intact and the item shows a red dot.
 
-Not yet exercised: the WebSocket relay across two machines, and the theme
-editor.
+Service features (October 2026), driven in the browser: cue without going
+live, `1`–`9` and Next across items, scripture lookup to slides with per-verse
+footers, saving to and adding from the library, new service from the open one,
+export → delete media → import restoring the image, auto-advance looping and
+pausing on blackout, the Output window following with footer and a measured
+cross-fade, and Stage showing position and the next item's title.
+
+Mass readings (October 2026): all 2,375 citations in the data parse; a
+random 60 of the converted ones resolve to Douay-Rheims text; the numbering
+conversion was spot-checked by reading the text (Psalm 23 → DR 22, Joel 3 → DR
+2:28, Micah's Bethlehem, Isaiah 9 and 64, Zechariah 2, John 6, Psalm 51:12
+"Create a clean heart"). Built end to end in the browser: the 29th Sunday
+(Year A), a Year II weekday, Christmas Night, Second Sunday of Lent (B), Palm
+Sunday with the Passion, the full Easter Vigil, and Christ the King (B).
+
+Whole Mass: Gloria/Creed decided correctly for an Ordinary Sunday, an
+Ordinary weekday, Advent Sunday, St Andrew, Christmas, Ash Wednesday, Holy
+Thursday, the Easter Octave and All Saints; 27 parts in order with the
+evangelist named; a library song filling the Entrance Hymn place and
+surviving a rebuild; pasted parish wording used in place of the built-in.
+
+Not yet exercised: the WebSocket relay across two machines, the theme
+editor, and importing a bundle with a large video.
