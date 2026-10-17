@@ -189,17 +189,34 @@ function grainPattern(ctx) {
 }
 
 /**
+ * How much ornament each season carries. Lent and the Triduum are plain —
+ * less light, no gold; Christmas and Easter are brighter and warmer; Advent
+ * keeps a candle's warmth. `glow` scales the season's light, `warm` is the
+ * candle-gold low down, `thread` the gold line that marks an Ambo slide.
+ */
+const SEASON_STYLE = {
+  ADVENT: { glow: 1, warm: 0.08, thread: 0.8 },
+  CHRISTMAS: { glow: 1.15, warm: 0.16, thread: 1 },
+  LENT: { glow: 0.8, warm: 0, thread: 0 },
+  EASTER_TRIDUUM: { glow: 0.75, warm: 0, thread: 0 },
+  EASTER: { glow: 1.2, warm: 0.16, thread: 1 },
+};
+const ORDINARY_STYLE = { glow: 1, warm: 0.09, thread: 0.8 };
+
+/**
  * Deep navy, lit from above by the day's liturgical colour as if through a
  * high window, a trace of candle-gold low down, the edges falling into
- * shadow, and a fine grain. Calm behind the words, never washing them out.
+ * shadow, a fine grain — and a short thread of gold at the head of the
+ * slide, Ambo's mark. Calm behind the words, never washing them out.
  */
-function drawLiturgical(ctx, colour, w, h) {
+function drawLiturgical(ctx, colour, w, h, season = "") {
   const [light, strength] = LITURGICAL[colour];
+  const style = SEASON_STYLE[season] ?? ORDINARY_STYLE;
   ctx.fillStyle = NAVY;
   ctx.fillRect(0, 0, w, h);
 
   ctx.save();
-  ctx.globalAlpha = strength;
+  ctx.globalAlpha = Math.min(1, strength * style.glow);
   const g = ctx.createRadialGradient(
     w / 2,
     -h * 0.1,
@@ -215,18 +232,20 @@ function drawLiturgical(ctx, colour, w, h) {
   ctx.fillRect(0, 0, w, h);
   ctx.restore();
 
-  const warm = ctx.createRadialGradient(
-    w / 2,
-    h * 1.05,
-    0,
-    w / 2,
-    h * 1.05,
-    w * 0.55,
-  );
-  warm.addColorStop(0, "rgba(232, 178, 92, 0.09)");
-  warm.addColorStop(1, "rgba(232, 178, 92, 0)");
-  ctx.fillStyle = warm;
-  ctx.fillRect(0, 0, w, h);
+  if (style.warm) {
+    const warm = ctx.createRadialGradient(
+      w / 2,
+      h * 1.05,
+      0,
+      w / 2,
+      h * 1.05,
+      w * 0.55,
+    );
+    warm.addColorStop(0, `rgba(232, 178, 92, ${style.warm})`);
+    warm.addColorStop(1, "rgba(232, 178, 92, 0)");
+    ctx.fillStyle = warm;
+    ctx.fillRect(0, 0, w, h);
+  }
 
   const v = ctx.createRadialGradient(
     w / 2,
@@ -246,11 +265,27 @@ function drawLiturgical(ctx, colour, w, h) {
     ctx.fillStyle = pattern;
     ctx.fillRect(0, 0, w, h);
   }
+
+  if (style.thread) {
+    // The gold thread: the same mark as the open tab, high in the margin.
+    const tw = w * 0.13;
+    const y = h * 0.062;
+    const t = ctx.createLinearGradient(w / 2 - tw / 2, 0, w / 2 + tw / 2, 0);
+    t.addColorStop(0, "rgba(226, 196, 110, 0)");
+    t.addColorStop(0.5, `rgba(236, 206, 122, ${0.75 * style.thread})`);
+    t.addColorStop(1, "rgba(226, 196, 110, 0)");
+    ctx.save();
+    ctx.shadowColor = `rgba(232, 178, 92, ${0.6 * style.thread})`;
+    ctx.shadowBlur = h * 0.012;
+    ctx.fillStyle = t;
+    ctx.fillRect(w / 2 - tw / 2, y, tw, Math.max(1, h * 0.0024));
+    ctx.restore();
+  }
 }
 
 function drawBackground(ctx, bg, w, h, onReady) {
   if (bg?.kind === "liturgical") {
-    drawLiturgical(ctx, bg.colour, w, h);
+    drawLiturgical(ctx, bg.colour, w, h, bg.season);
     return;
   }
   if (!bg || bg.kind === "color") {
@@ -329,6 +364,7 @@ export function renderSlide(ctx, opts) {
     countdownTo = null,
     footer = "",
     litColour = "",
+    litSeason = "",
     onReady,
   } = opts;
 
@@ -350,7 +386,7 @@ export function renderSlide(ctx, opts) {
   // the item's background, otherwise the theme's.
   const themeBg =
     theme.liturgical && hasLiturgical(litColour)
-      ? { kind: "liturgical", colour: litColour }
+      ? { kind: "liturgical", colour: litColour, season: litSeason }
       : theme.background;
   drawBackground(
     ctx,

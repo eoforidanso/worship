@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useOutputOpen } from "../lib/outputPresence";
+import { restored, ago } from "../lib/restored";
 import SafeBoundary from "../components/SafeBoundary";
 import PreviewDock from "../components/PreviewDock";
 import ServicePlanner from "../components/ServicePlanner";
@@ -137,6 +138,7 @@ export default function Shell() {
           <span className={`conn conn-${status}`} title={`Sync: ${status}`}>
             {status === "online" ? "Network sync" : "Local only"}
           </span>
+          <LiveStrip />
           <InstallButton />
           <button
             className="btn btn-glass"
@@ -149,6 +151,7 @@ export default function Shell() {
       </header>
 
       <Shortcuts />
+      <RestoredNotice />
       <OfflineNotice />
       <BackupReminder />
 
@@ -260,18 +263,32 @@ function InstallButton() {
  * Ready (blue — the window is open, nothing showing: black, cleared or no
  * slide yet) and Live (gold, with a slow pulse — the room is seeing a slide).
  */
-function OutputButton() {
+/** What the room is seeing, as one of: off · ready · live (plus blackout/cleared), and which item. */
+function useOnAir() {
   const open = useOutputOpen();
   const { itemId, slideIndex, blackout, cleared } = useLive();
   // Live only when the projector really draws a slide: one in this plan.
-  const showing = useContent(
-    (st) => !!st.plan.items.find((i) => i.id === itemId)?.slides[slideIndex],
+  const item = useContent(
+    (st) => st.plan.items.find((i) => i.id === itemId) ?? null,
   );
+  const showing = !!item?.slides[slideIndex];
   const state = !open
     ? "off"
     : showing && !blackout && !cleared
       ? "live"
       : "ready";
+  return {
+    open,
+    state,
+    item: showing ? item : null,
+    slideIndex,
+    blackout,
+    cleared,
+  };
+}
+
+function OutputButton() {
+  const { state, blackout } = useOnAir();
   const word = {
     off: "Off",
     ready: blackout ? "Black" : "Ready",
@@ -294,6 +311,36 @@ function OutputButton() {
       <span className="output-light" aria-hidden="true" />
       Output
       <span className="output-state">{word}</span>
+    </button>
+  );
+}
+
+/**
+ * Always in view during Mass: what the congregation is seeing right now.
+ * "● LIVE · Penitential Act · 2/5", gold and slowly pulsing; "■ BLACK" or
+ * "TEXT HIDDEN" when those are on. Gone when the projector shows nothing.
+ */
+function LiveStrip() {
+  const { open, item, slideIndex, blackout, cleared } = useOnAir();
+  const navigate = useNavigate();
+  if (!open || !item) return null;
+  const kind = blackout ? "black" : cleared ? "cleared" : "live";
+  const label = { live: "Live", black: "Black", cleared: "Text hidden" }[kind];
+  return (
+    <button
+      className={`live-strip live-strip-${kind}`}
+      onClick={() => navigate("/live")}
+      title="What the congregation is seeing now — open Live"
+      aria-live="polite"
+    >
+      <span className="live-strip-light" aria-hidden="true" />
+      <span className="live-strip-label">{label}</span>
+      <span className="live-strip-title">{item.title}</span>
+      {item.slides.length > 1 && (
+        <span className="live-strip-pos">
+          {slideIndex + 1}/{item.slides.length}
+        </span>
+      )}
     </button>
   );
 }
@@ -381,6 +428,32 @@ function OfflineNotice() {
  * Everything lives in this one browser. Once there is something worth
  * losing, ask for a backup weekly — gently, and never on the projector.
  */
+/** On opening: the service came back, and how recent it is. Leaves by itself. */
+function RestoredNotice() {
+  const [shown, setShown] = useState(!!restored);
+  useEffect(() => {
+    if (!shown) return;
+    const t = setTimeout(() => setShown(false), 12000);
+    return () => clearTimeout(t);
+  }, [shown]);
+  if (!shown) return null;
+  const when = ago(restored.savedAt);
+  return (
+    <div className="notice notice-restored" role="status">
+      <span>
+        <strong>✓ Restored</strong> — {restored.title || "your service"},{" "}
+        {restored.count} item
+        {restored.count === 1 ? "" : "s"}
+        {when ? `, as last saved ${when}` : ""}. Every change is saved on this
+        computer as you work.
+      </span>
+      <button className="btn btn-quiet" onClick={() => setShown(false)}>
+        OK
+      </button>
+    </div>
+  );
+}
+
 function BackupReminder() {
   const last = useContent((s) => s.lastBackupAt);
   const snoozed = useContent((s) => s.backupSnoozedUntil);

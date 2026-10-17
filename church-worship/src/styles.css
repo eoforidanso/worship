@@ -572,6 +572,10 @@ input[type='range'] {
   background: rgba(255, 255, 255, 0.05);
   color: var(--text);
 }
+.notice-restored strong {
+  color: var(--live);
+  font-weight: 600;
+}
 .notice .btn-soft {
   background: rgba(76, 141, 255, 0.12);
   border-color: rgba(76, 141, 255, 0.35);
@@ -789,6 +793,66 @@ input[type='range'] {
   height: 100%;
   background: currentColor;
   border-radius: 2px;
+}
+.readiness.open {
+  border-color: rgba(224, 178, 74, 0.45);
+}
+/* The checklist: what's ready, what isn't, grouped as the Mass runs. */
+.checklist-panel {
+  margin: -4px 0 12px;
+  padding: 10px 12px;
+  max-height: 46vh;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 13px;
+}
+.checklist-panel section + section {
+  margin-top: 8px;
+}
+.checklist-panel h4 {
+  display: flex;
+  justify-content: space-between;
+  margin: 8px 0 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.checklist-panel ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.checklist-panel li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 4px 0;
+}
+.checklist-panel .mark {
+  width: 14px;
+  flex-shrink: 0;
+}
+.checklist-panel li.ok {
+  color: #9fb0c2;
+}
+.checklist-panel li.ok .mark {
+  color: var(--live);
+}
+.checklist-panel li.warn .mark {
+  color: #e0b24a;
+}
+.checklist-panel .what {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.checklist-panel .why {
+  font-size: 12px;
+  color: #e0b24a;
 }
 .planner-empty {
   margin: 4px 0 10px;
@@ -1107,6 +1171,96 @@ input[type='range'] {
 }
 @media (prefers-reduced-motion: reduce) {
   .output-btn.output-live {
+    animation: none;
+  }
+}
+
+/* The live strip in the top bar: never wonder what the room is seeing. */
+.live-strip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 340px;
+  min-width: 0;
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(226, 196, 110, 0.55);
+  background: linear-gradient(180deg, rgba(232, 178, 92, 0.18), rgba(232, 178, 92, 0.06));
+  color: #f4e2ac;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 0 14px rgba(232, 178, 92, 0.18);
+  animation: candle 9s ease-in-out infinite;
+}
+.live-strip-light {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: #e5483c;
+  box-shadow: 0 0 6px rgba(255, 80, 60, 0.9);
+  animation: on-air-dot 2.8s ease-in-out infinite;
+}
+.live-strip-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+.live-strip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+.live-strip-pos {
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #c9b98a;
+}
+.live-strip-black,
+.live-strip-cleared {
+  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(0, 0, 0, 0.45);
+  color: #e6edf3;
+  box-shadow: none;
+  animation: none;
+}
+.live-strip-black .live-strip-label,
+.live-strip-cleared .live-strip-label {
+  color: #fff;
+}
+.live-strip-black .live-strip-light {
+  border-radius: 1px;
+  background: #fff;
+  box-shadow: none;
+  animation: none;
+}
+.live-strip-cleared .live-strip-light {
+  background: #8fb6ff;
+  box-shadow: none;
+  animation: none;
+}
+@keyframes on-air-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@media (max-width: 600px) {
+  .live-strip {
+    display: none; /* the Output button says LIVE; the title needs the room */
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-strip,
+  .live-strip-light {
     animation: none;
   }
 }
@@ -3280,4 +3434,179 @@ body.bare:has(.remote) {
   .rail {
     width: 240px;
   }
+}
+
+/* --- welcome: an empty service starts from the day ---------------------- */
+
+.welcome {
+  max-width: 640px;
+  margin: 4vh auto 40px;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+.welcome-hello {
+  margin: 0 0 14px;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 20px;
+  color: rgba(226, 196, 110, 0.9);
+}
+.welcome-hello strong {
+  font-weight: 600;
+}
+.welcome-day {
+  padding: 14px 18px;
+  border-left: 4px solid var(--lit-green);
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.01));
+}
+.welcome-day h2 {
+  margin: 4px 0;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 34px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+.welcome-day p {
+  margin: 0;
+}
+.welcome-build {
+  margin-top: 22px;
+  font-size: 19px;
+  padding: 16px 22px;
+}
+.welcome-progress {
+  margin: 8px 0 0;
+  text-align: center;
+}
+.welcome-facts {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 14px;
+}
+.welcome-facts li {
+  display: flex;
+  gap: 10px;
+  align-items: baseline;
+}
+.welcome-facts li > span:first-child {
+  width: 14px;
+  flex-shrink: 0;
+}
+.welcome-facts li.ok > span:first-child {
+  color: var(--live);
+}
+.welcome-facts li.warn {
+  color: var(--muted);
+}
+.welcome-other {
+  margin-top: 18px;
+  color: var(--muted);
+}
+button.link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: #9cc0ff;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.parish-setup {
+  margin-top: 26px;
+  padding: 16px 18px;
+  border: 1px solid rgba(226, 196, 110, 0.25);
+  border-radius: 12px;
+  background: rgba(232, 178, 92, 0.04);
+  display: grid;
+  gap: 10px;
+}
+.parish-setup h3 {
+  margin: 0;
+  text-transform: none;
+  letter-spacing: 0;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--gold);
+}
+.parish-setup .row {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+@media (max-width: 600px) {
+  .welcome {
+    margin-top: 16px;
+    padding: 0 14px;
+  }
+  .welcome-day h2 {
+    font-size: 27px;
+  }
+}
+
+/* --- where we are in the Mass ---------------------------------------------- */
+
+.mass-progress {
+  margin: 0 0 14px;
+  max-width: calc(min(46vh, 520px) * 16 / 9 * 1.5 + 16px);
+}
+.mass-progress-track {
+  position: relative;
+  display: flex;
+  gap: 3px;
+}
+.mp-seg {
+  flex-basis: 0;
+  min-width: 18px;
+  position: relative;
+  height: 24px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  overflow: hidden;
+}
+.mp-label {
+  position: absolute;
+  inset: 0 6px;
+  display: flex;
+  align-items: center;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mp-seg.done {
+  background: rgba(232, 178, 92, 0.08);
+}
+.mp-seg.done .mp-label {
+  color: #a99a73;
+}
+.mp-seg.now {
+  border-color: rgba(226, 196, 110, 0.6);
+  background: linear-gradient(180deg, rgba(232, 178, 92, 0.26), rgba(232, 178, 92, 0.1));
+  box-shadow: 0 0 12px rgba(232, 178, 92, 0.2);
+}
+.mp-seg.now .mp-label {
+  color: #f4e2ac;
+  font-weight: 600;
+}
+.mp-mark {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--gold);
+  box-shadow: 0 0 6px var(--gold);
+  pointer-events: none;
 }

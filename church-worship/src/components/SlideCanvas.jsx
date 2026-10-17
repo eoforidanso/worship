@@ -50,7 +50,7 @@ const frameKey = (p) =>
     p.showLogo,
     p.slide?.background?.mediaId ?? p.background?.mediaId ?? p.background?.value ?? '',
     p.theme?.id ?? '',
-    p.theme?.liturgical ? p.litColour : '',
+    p.theme?.liturgical ? `${p.litColour}:${p.litSeason}` : '',
   ].join('|')
 
 export default function SlideCanvas({
@@ -72,7 +72,7 @@ export default function SlideCanvas({
   const canvasRef = useRef(null)
   // Props are read through a ref so the rAF loop never needs re-subscribing.
   const propsRef = useRef(null)
-  const { tick, litColour } = useRedraw()
+  const { tick, litColour, litSeason } = useRedraw()
   propsRef.current = {
     slide,
     theme,
@@ -84,6 +84,7 @@ export default function SlideCanvas({
     countdownTo,
     footer,
     litColour,
+    litSeason,
   }
   const fadeRef = useRef(fade)
   fadeRef.current = fade
@@ -180,6 +181,7 @@ export default function SlideCanvas({
     footer,
     tick,
     litColour,
+    litSeason,
   ])
 
   return (

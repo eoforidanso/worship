@@ -10,7 +10,7 @@ export function useLiturgicalColour() {
     let live = true
     if (!date) return setLitColour('')
     describeDay(date)
-      .then((d) => live && setLitColour(d?.color))
+      .then((d) => live && setLitColour(d?.color, d?.season))
       .catch(() => {})
     return () => {
       live = false

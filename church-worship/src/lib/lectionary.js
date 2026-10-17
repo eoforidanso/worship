@@ -238,7 +238,16 @@ export async function describeDay(iso) {
   if (!d.principal) return null
   const isSunday = new Date(`${iso}T12:00:00`).getDay() === 0
   const cycle = isSunday || d.principal.grade >= 6 ? `Year ${d.cycles.sunday}` : `Year ${d.cycles.weekday}`
-  return { name: d.principal.name, grade: GRADES[d.principal.grade], color: d.color, cycle }
+  // Sundays rank with feasts of the Lord in the calendar data; call them Sundays.
+  const sunday =
+    isSunday && d.principal.grade === 5 && /Sunday|^(Advent|Lent|Easter)\d$/.test(d.principal.key)
+  return {
+    name: d.principal.name,
+    grade: sunday ? 'Sunday' : GRADES[d.principal.grade],
+    color: d.color,
+    cycle,
+    season: d.principal.season ?? '',
+  }
 }
 
 // --- parts of the Mass ---------------------------------------------------------

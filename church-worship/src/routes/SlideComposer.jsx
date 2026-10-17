@@ -52,7 +52,9 @@ export default function SlideComposer() {
   if (!item)
     return (
       <p className="empty pad">
-        No item selected. Add one from the service plan.
+        Choose an item in the service plan to edit its slides here — or add a
+        hymn, a reading or a text with + in the plan. Edits reach the projector
+        only when that slide is live.
       </p>
     );
 

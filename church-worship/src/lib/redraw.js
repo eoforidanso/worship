@@ -8,10 +8,12 @@
 
 import { create } from 'zustand'
 
-export const useRedraw = create(() => ({ tick: 0, litColour: '' }))
+export const useRedraw = create(() => ({ tick: 0, litColour: '', litSeason: '' }))
 
 export const bumpRedraw = () => useRedraw.setState((s) => ({ tick: s.tick + 1 }))
-export const setLitColour = (litColour) => useRedraw.setState({ litColour: litColour || '' })
+// `litSeason` (ADVENT, LENT, EASTER…) tunes how much ornament the slides carry.
+export const setLitColour = (litColour, litSeason = '') =>
+  useRedraw.setState({ litColour: litColour || '', litSeason: litSeason || '' })
 
 if (typeof document !== 'undefined' && document.fonts) {
   document.fonts.addEventListener?.('loadingdone', bumpRedraw)
