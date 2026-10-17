@@ -98,9 +98,9 @@ export default function Shell() {
           <img
             className="brand-mark"
             src={`${import.meta.env.BASE_URL}icon-192.png`}
-            alt="Ambo"
-            title="Ambo"
+            alt=""
           />
+          <span className="wordmark">Ambo</span>
           <input
             className="plan-title"
             value={planTitle}
