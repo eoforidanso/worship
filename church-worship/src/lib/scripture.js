@@ -8,7 +8,7 @@
  */
 
 import { uid } from './id'
-import { fetchPassage } from './bible'
+import { fetchPassage, prettyCitation } from './bible'
 
 export const TRANSLATIONS = [
   // Catholic, with the deuterocanonical books; served by getbible (lib/bible.js).
@@ -34,10 +34,11 @@ export async function lookup(reference, translation = 'kjv') {
     // Lectionary-style references; Douay-Rheims numbering is converted inside,
     // so the footer shows the reference as typed rather than Vulgate numbers.
     const p = await fetchPassage(ref)
+    const pretty = prettyCitation(ref)
     return {
-      reference: ref,
+      reference: pretty,
       translation: 'Douay-Rheims',
-      fixedFooter: `${ref} · Douay-Rheims`,
+      fixedFooter: `${pretty} · Douay-Rheims`,
       verses: p.verses.map((v) => {
         const [chapter, verse] = v.ref.split(':').map(Number)
         return { book: v.book, chapter, verse, text: v.text }

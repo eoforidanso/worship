@@ -113,12 +113,172 @@ const ALIASES = {
   Maccabees: '2 Maccabees',
 }
 
+// What people type: the usual abbreviations (NAB / missal style and common
+// English ones). Keys are lower-case; numbers are separated ("1 cor").
+const ABBREVIATIONS = {
+  gen: 'Genesis',
+  gn: 'Genesis',
+  ex: 'Exodus',
+  exod: 'Exodus',
+  lev: 'Leviticus',
+  lv: 'Leviticus',
+  num: 'Numbers',
+  nm: 'Numbers',
+  deut: 'Deuteronomy',
+  dt: 'Deuteronomy',
+  josh: 'Joshua',
+  jos: 'Joshua',
+  judg: 'Judges',
+  jgs: 'Judges',
+  ru: 'Ruth',
+  rth: 'Ruth',
+  '1 sam': '1 Samuel',
+  '1 sm': '1 Samuel',
+  '2 sam': '2 Samuel',
+  '2 sm': '2 Samuel',
+  '1 kgs': '1 Kings',
+  '1 ki': '1 Kings',
+  '2 kgs': '2 Kings',
+  '2 ki': '2 Kings',
+  '1 chr': '1 Chronicles',
+  '1 chron': '1 Chronicles',
+  '2 chr': '2 Chronicles',
+  '2 chron': '2 Chronicles',
+  ezr: 'Ezra',
+  neh: 'Nehemiah',
+  tob: 'Tobit',
+  tb: 'Tobit',
+  jdt: 'Judith',
+  esth: 'Esther',
+  est: 'Esther',
+  jb: 'Job',
+  ps: 'Psalms',
+  pss: 'Psalms',
+  psa: 'Psalms',
+  psalm: 'Psalms',
+  prov: 'Proverbs',
+  prv: 'Proverbs',
+  pr: 'Proverbs',
+  eccl: 'Ecclesiastes',
+  eccles: 'Ecclesiastes',
+  qoh: 'Ecclesiastes',
+  song: 'Song of Songs',
+  sg: 'Song of Songs',
+  cant: 'Song of Songs',
+  'canticle of canticles': 'Song of Songs',
+  wis: 'Wisdom',
+  ws: 'Wisdom',
+  sir: 'Sirach',
+  ecclus: 'Sirach',
+  isa: 'Isaiah',
+  is: 'Isaiah',
+  jer: 'Jeremiah',
+  lam: 'Lamentations',
+  bar: 'Baruch',
+  ezek: 'Ezekiel',
+  ez: 'Ezekiel',
+  dan: 'Daniel',
+  dn: 'Daniel',
+  hos: 'Hosea',
+  jl: 'Joel',
+  am: 'Amos',
+  obad: 'Obadiah',
+  ob: 'Obadiah',
+  jon: 'Jonah',
+  mic: 'Micah',
+  mi: 'Micah',
+  nah: 'Nahum',
+  na: 'Nahum',
+  hab: 'Habakkuk',
+  hb: 'Habakkuk',
+  zeph: 'Zephaniah',
+  zep: 'Zephaniah',
+  hag: 'Haggai',
+  hg: 'Haggai',
+  zech: 'Zechariah',
+  zec: 'Zechariah',
+  mal: 'Malachi',
+  '1 macc': '1 Maccabees',
+  '1 mc': '1 Maccabees',
+  '2 macc': '2 Maccabees',
+  '2 mc': '2 Maccabees',
+  mt: 'Matthew',
+  matt: 'Matthew',
+  mk: 'Mark',
+  mar: 'Mark',
+  mrk: 'Mark',
+  lk: 'Luke',
+  luk: 'Luke',
+  jn: 'John',
+  jhn: 'John',
+  ac: 'Acts',
+  act: 'Acts',
+  rom: 'Romans',
+  rm: 'Romans',
+  '1 cor': '1 Corinthians',
+  '2 cor': '2 Corinthians',
+  gal: 'Galatians',
+  eph: 'Ephesians',
+  phil: 'Philippians',
+  php: 'Philippians',
+  col: 'Colossians',
+  '1 thess': '1 Thessalonians',
+  '1 thes': '1 Thessalonians',
+  '1 th': '1 Thessalonians',
+  '2 thess': '2 Thessalonians',
+  '2 thes': '2 Thessalonians',
+  '2 th': '2 Thessalonians',
+  '1 tim': '1 Timothy',
+  '1 tm': '1 Timothy',
+  '2 tim': '2 Timothy',
+  '2 tm': '2 Timothy',
+  tit: 'Titus',
+  ti: 'Titus',
+  phlm: 'Philemon',
+  philem: 'Philemon',
+  heb: 'Hebrews',
+  jas: 'James',
+  jam: 'James',
+  '1 pet': '1 Peter',
+  '1 pt': '1 Peter',
+  '2 pet': '2 Peter',
+  '2 pt': '2 Peter',
+  '1 jn': '1 John',
+  '2 jn': '2 John',
+  '3 jn': '3 John',
+  rev: 'Revelation',
+  rv: 'Revelation',
+  apoc: 'Revelation',
+}
+
+// Every spelling we accept, lower-cased → the canonical name.
+const LOOKUP = new Map()
+for (const name of Object.keys(BOOKS)) LOOKUP.set(name.toLowerCase(), name)
+for (const [k, v] of Object.entries(ALIASES)) if (BOOKS[v]) LOOKUP.set(k.toLowerCase(), v)
+for (const [k, v] of Object.entries(ABBREVIATIONS)) LOOKUP.set(k, v)
+
+/**
+ * "john", "John", "Jn", "jn.", "1cor", "1 Cor", "I Corinthians", "psalm" →
+ * the book's canonical name; null if it isn't a book of the Bible.
+ */
 export function canonicalBook(name) {
   const n = name
+    .toLowerCase()
+    .replace(/\./g, ' ')
+    .replace(/^(iii|ii|i)\s+(?=[a-z])/, (_, r) => `${r.length} `) // I John, II Kings
+    .replace(/^(first|second|third)\s+/, (w) => `${{ first: 1, second: 2, third: 3 }[w.trim()]} `)
+    .replace(/^([1-3])\s*/, '$1 ')
     .replace(/\s+/g, ' ')
-    .replace(/^([1-3])(\S)/, '$1 $2')
     .trim()
-  return BOOKS[n] ? n : ALIASES[n] && BOOKS[ALIASES[n]] ? ALIASES[n] : null
+  return LOOKUP.get(n) ?? null
+}
+
+/** "jn 3:16" → "John 3:16", "ps 23" → "Psalm 23": a typed reference as it should print. */
+export function prettyCitation(ref) {
+  const m = ref.trim().match(/^((?:(?:[1-3]|[iI]{1,3})\s?)?[A-Za-z][A-Za-z. ]*?)\.?\s*(?=\d|[A-F]:)/)
+  const book = m && canonicalBook(m[1])
+  if (!book) return ref.trim()
+  return `${book === 'Psalms' ? 'Psalm' : book} ${ref.trim().slice(m[0].length).replace(/\s+/g, ' ')}`
 }
 
 // --- citation parsing --------------------------------------------------------
@@ -145,7 +305,9 @@ export function parseCitation(raw) {
   for (let seg of s.split(';')) {
     seg = seg.trim()
     if (!seg) continue
-    const m = seg.match(/^((?:[1-3]\s?)?[A-Za-z][A-Za-z ]*?)\.?\s+(?=[\dA-F](?:[\d:,\- ]|$|\s*\())/)
+    // The book runs until the first number (spaces optional: "jn3:16"), or a
+    // capital chapter letter of the Greek Esther ("Esther C:12").
+    const m = seg.match(/^((?:(?:[1-3]|[iI]{1,3})\s?)?[A-Za-z][A-Za-z. ]*?)\.?\s*(?=\d|[A-F]:)/)
     if (m) {
       const name = canonicalBook(m[1])
       if (!name) throw new Error(`Unknown book “${m[1]}” in ${raw}`)
