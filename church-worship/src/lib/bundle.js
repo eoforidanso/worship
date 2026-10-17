@@ -57,6 +57,7 @@ export async function exportBundle(scope = 'service') {
     themes,
     media,
     logoId: s.logoId,
+    prayers: s.prayers, // the parish's own Order of Mass texts travel with every file
     blobs,
   }
 

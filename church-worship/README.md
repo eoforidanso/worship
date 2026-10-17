@@ -30,6 +30,7 @@ npm run server
 | --- | --- | --- |
 | **Service Planner** | left rail, always visible | Drag-and-drop the running order. Click an item to **cue** it (nothing changes on screen), double-click to edit. ☆ saves it to the library. |
 | **Readings** | `/readings` | The Lectionary for Mass by date: the celebration, Year A/B/C and I/II, the Mass options, and every reading — added to the service in one click. |
+| **Prayers** | `/prayers` | The people's parts of the Order of Mass — traditional English, Latin, or your missal's wording pasted once. |
 | **Services & Songs** | `/library` | Every saved service, newest first — open one, or start next week's as a copy. The song library, searchable by title, author or lyric. Export / import / back up. |
 | **Slide Composer** | `/compose/:itemId` | Edit slide text, labels, theme and background. Paste a whole song and have it split into slides. |
 | **Media Browser** | `/media` | Grid of images and video with tags and search. Drop files onto it. Star an image to make it the logo. |
@@ -74,6 +75,41 @@ Ordinary Time · Year A" — next to the date.
   slide ("A reading from the Book of the Prophet Isaiah"), a few verses per
   slide, and the closing dialogue ("The word of the Lord. / Thanks be to
   God."); the psalm stanza by stanza with the response between.
+
+## The whole Mass
+
+On the Readings page, **Add: Whole Mass** (the default) builds the entire
+Order of Mass with the day's readings in their place — one item per part,
+one screen each:
+
+Entrance Hymn · Sign of the Cross and Greeting · Penitential Act · Kyrie ·
+Gloria · *the readings* · Before the Gospel ("…according to Matthew. /
+Glory to you, O Lord.") · Gospel · Creed · Universal Prayer · Offertory Hymn
+· Pray, Brethren · Preface Dialogue · Holy, Holy, Holy · Mystery of Faith ·
+Doxology · The Lord's Prayer · Sign of Peace · Lamb of God · Behold the Lamb
+of God · Communion Hymn · Blessing and Dismissal · Recessional Hymn
+
+- **Gloria and Creed follow the day**: Gloria on Sundays outside Advent and
+  Lent, on solemnities and feasts, Holy Thursday and the Easter Octave; Creed
+  on Sundays and solemnities. The checkboxes show what was decided and can be
+  changed. Pick the Nicene or Apostles' Creed and the Mystery of Faith
+  acclamation there too.
+- **Hymn places**: four empty song items. Select one, type in *Add from
+  library…* and the song takes that place. Rebuilding the Mass keeps the
+  hymns already chosen.
+- **Good Friday** has no Mass; only its readings are added.
+- The priest's prayers that change every day (Collect, Prayer over the
+  Offerings, Preface, Eucharistic Prayer) are not projected.
+
+**The wording.** The **Prayers** page sets each prayer to *Traditional
+English* (the long-standing public-domain Catholic texts — "Glory be to God
+on high…", "I believe in one God…", "Lord, I am not worthy that thou
+shouldst enter under my roof…" — and plain renderings of the Latin where the
+text is newer), *Latin* (the Missale Romanum), or *Our missal*. The current
+English translation of the Roman Missal (© ICEL) is licensed through each
+bishops' conference, so it can't ship in a public app: paste it once under
+*Our missal* and it is used at every Mass and saved in every backup file.
+Lines starting `R.` are the people's.
 
 **The text.** Readings fill in from the **Douay-Rheims** Bible — public domain,
 and the free English Catholic Bible that has every book the Lectionary uses
@@ -124,6 +160,13 @@ blackout, clear and logo.
 
 **Transitions.** The projector and live preview cross-fade (350ms) between
 slides and into blackout or the logo, instead of hard-cutting.
+
+**Typeface.** Slides are set in **EB Garamond** (SIL Open Font License), the
+classic book face of missals and Bibles, in semibold so it holds up on a
+projector. It is bundled with the app — no font is fetched at Mass — and the
+app waits for it before drawing, so a slide never flashes in a fallback
+font. Other fonts are in the Themes tab; Twi and Fante letters such as ɛ and
+ɔ fall back to a system font if the theme's font lacks them.
 
 **Footers.** Themes have a *Reference footer* toggle (on for Scripture). It
 shows the slide's own footer, else the item's title and subtitle — good for
@@ -235,6 +278,8 @@ src/
   lib/lectionary.js    date → celebration, cycles, Mass options, readings
   lib/bible.js         citation parser, Hebrew→Vulgate numbering, Douay-Rheims fetch
   lib/massBuilder.js   readings → plan items, the way they are proclaimed
+  lib/orderOfMass.js   the whole Mass: Order of Mass + readings + hymn places
+  data/orderOfMass.js  the people's parts, traditional English and Latin, Gloria/Creed rules
   data/                lectionary.json, calendar/2025–2040, NOTICE.md (sources, licences)
 scripts/               build-lectionary.py, fetch-calendar.mjs — regenerate data/
   lib/bundle.js        .worship.json export / import, media included
@@ -326,6 +371,12 @@ conversion was spot-checked by reading the text (Psalm 23 → DR 22, Joel 3 → 
 "Create a clean heart"). Built end to end in the browser: the 29th Sunday
 (Year A), a Year II weekday, Christmas Night, Second Sunday of Lent (B), Palm
 Sunday with the Passion, the full Easter Vigil, and Christ the King (B).
+
+Whole Mass: Gloria/Creed decided correctly for an Ordinary Sunday, an
+Ordinary weekday, Advent Sunday, St Andrew, Christmas, Ash Wednesday, Holy
+Thursday, the Easter Octave and All Saints; 27 parts in order with the
+evangelist named; a library song filling the Entrance Hymn place and
+surviving a rebuild; pasted parish wording used in place of the built-in.
 
 Not yet exercised: the WebSocket relay across two machines, the theme
 editor, and importing a bundle with a large video.

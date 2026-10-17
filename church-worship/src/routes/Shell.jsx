@@ -10,6 +10,7 @@ import { describeDay } from '../lib/lectionary'
 const TABS = [
   { to: '/live', label: 'Live' },
   { to: '/readings', label: 'Readings' },
+  { to: '/prayers', label: 'Prayers' },
   { to: '/library', label: 'Services & Songs' },
   { to: '/compose', label: 'Compose' },
   { to: '/media', label: 'Media' },

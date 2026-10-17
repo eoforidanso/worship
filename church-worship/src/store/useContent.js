@@ -11,12 +11,16 @@ import { uid } from '../lib/id'
  * persisted.
  */
 
+export const SERIF = "'EB Garamond', Georgia, 'Times New Roman', serif"
+const OLD_SANS = "'Inter', system-ui, sans-serif"
+
 export const DEFAULT_THEME = {
   id: 'theme_default',
   name: 'Default',
-  fontFamily: "'Inter', system-ui, sans-serif",
-  fontSize: 64, // px, relative to a 1920x1080 canvas
-  fontWeight: 700,
+  // A missal's typeface. Bundled (see main.jsx), so it projects offline.
+  fontFamily: SERIF,
+  fontSize: 72, // px, relative to a 1920x1080 canvas — Garamond runs small, so a little larger
+  fontWeight: 600, // semibold: Garamond's regular is too fine for a projector
   color: '#ffffff',
   align: 'center', // left | center | right
   valign: 'middle', // top | middle | bottom
@@ -33,8 +37,8 @@ const SCRIPTURE_THEME = {
   ...DEFAULT_THEME,
   id: 'theme_scripture',
   name: 'Scripture',
-  fontSize: 52,
-  fontWeight: 500,
+  fontSize: 60,
+  fontWeight: 600,
   align: 'left',
   showFooter: true,
   background: { kind: 'color', value: '#101418' },
@@ -83,10 +87,26 @@ const seedPlan = () => ({
       title: 'Amazing Grace',
       subtitle: 'John Newton',
       slides: [
-        { id: uid('sl'), label: 'Verse 1', body: 'Amazing grace how sweet the sound\nThat saved a wretch like me' },
-        { id: uid('sl'), label: 'Verse 1', body: 'I once was lost but now am found\nWas blind but now I see' },
-        { id: uid('sl'), label: 'Verse 2', body: "'Twas grace that taught my heart to fear\nAnd grace my fears relieved" },
-        { id: uid('sl'), label: 'Verse 2', body: 'How precious did that grace appear\nThe hour I first believed' },
+        {
+          id: uid('sl'),
+          label: 'Verse 1',
+          body: 'Amazing grace how sweet the sound\nThat saved a wretch like me',
+        },
+        {
+          id: uid('sl'),
+          label: 'Verse 1',
+          body: 'I once was lost but now am found\nWas blind but now I see',
+        },
+        {
+          id: uid('sl'),
+          label: 'Verse 2',
+          body: "'Twas grace that taught my heart to fear\nAnd grace my fears relieved",
+        },
+        {
+          id: uid('sl'),
+          label: 'Verse 2',
+          body: 'How precious did that grace appear\nThe hour I first believed',
+        },
       ],
     }),
     makeItem('scripture', {
@@ -94,7 +114,11 @@ const seedPlan = () => ({
       subtitle: 'ESV',
       slides: [
         { id: uid('sl'), label: 'v1', body: 'The Lord is my shepherd; I shall not want.' },
-        { id: uid('sl'), label: 'v2', body: 'He makes me lie down in green pastures.\nHe leads me beside still waters.' },
+        {
+          id: uid('sl'),
+          label: 'v2',
+          body: 'He makes me lie down in green pastures.\nHe leads me beside still waters.',
+        },
         { id: uid('sl'), label: 'v3', body: 'He restores my soul.' },
       ],
     }),
@@ -107,6 +131,9 @@ export const useContent = create(
       plan: seedPlan(),
       services: [], // saved services, newest first; `plan` is the open one
       songs: [], // reusable library items (songs, liturgy, standing announcements)
+      // Order of Mass texts: { [prayerId]: { use: 'en'|'la'|'parish', text, choice } }.
+      // `text` is the parish's own wording, pasted once from its missal.
+      prayers: {},
       themes: [DEFAULT_THEME, SCRIPTURE_THEME],
       media: [],
       logoUrl: null,
@@ -191,9 +218,7 @@ export const useContent = create(
           plan: {
             ...s.plan,
             items: s.plan.items.map((it) =>
-              it.id !== itemId
-                ? it
-                : { ...it, slides: it.slides.filter((sl) => sl.id !== slideId) },
+              it.id !== itemId ? it : { ...it, slides: it.slides.filter((sl) => sl.id !== slideId) },
             ),
           },
         })),
@@ -261,14 +286,25 @@ export const useContent = create(
         set((s) => {
           const items = [...s.plan.items]
           const first = items.findIndex((it) => it.lectionary?.group === group)
+          // Hymns already chosen for this Mass survive a rebuild in their slot.
+          const chosen = new Map(
+            items
+              .filter((it) => it.lectionary?.group === group && it.lectionary.slot && !it.placeholder)
+              .map((it) => [it.lectionary.slot, it]),
+          )
+          const fresh = newItems.map((it) => (it.placeholder && chosen.get(it.lectionary?.slot)) || it)
           const kept = items.filter((it) => it.lectionary?.group !== group)
           let at
           if (first !== -1) at = first
-          else if (afterId && kept.some((it) => it.id === afterId)) at = kept.findIndex((it) => it.id === afterId) + 1
+          else if (afterId && kept.some((it) => it.id === afterId))
+            at = kept.findIndex((it) => it.id === afterId) + 1
           else at = kept.length
-          kept.splice(at, 0, ...newItems)
+          kept.splice(at, 0, ...fresh)
           return { plan: { ...s.plan, items: kept } }
         }),
+
+      setPrayer: (id, patch) =>
+        set((s) => ({ prayers: { ...s.prayers, [id]: { ...s.prayers[id], ...patch } } })),
 
       // --- services --------------------------------------------------------
       // One service is open at a time (`plan`). The others are kept whole in
@@ -276,8 +312,7 @@ export const useContent = create(
       // start from it instead of from nothing.
 
       /** Store the open service in the saved list (upsert by id). */
-      saveService: () =>
-        set((s) => ({ services: upsert(s.services, { ...s.plan, savedAt: Date.now() }) })),
+      saveService: () => set((s) => ({ services: upsert(s.services, { ...s.plan, savedAt: Date.now() }) })),
 
       openService: (id) =>
         set((s) => {
@@ -335,7 +370,16 @@ export const useContent = create(
         delete item.savedAt
         set((s) => {
           const items = [...s.plan.items]
-          const at = afterId ? items.findIndex((it) => it.id === afterId) + 1 : items.length
+          const target = items.findIndex((it) => it.id === afterId)
+          // A hymn placeholder in the Order of Mass is filled, not appended to.
+          if (target !== -1 && items[target].placeholder) {
+            const ph = items[target]
+            item.subtitle = ph.title
+            item.lectionary = ph.lectionary
+            items[target] = item
+            return { plan: { ...s.plan, items } }
+          }
+          const at = afterId ? target + 1 : items.length
           items.splice(at || items.length, 0, item)
           return { plan: { ...s.plan, items } }
         })
@@ -365,7 +409,11 @@ export const useContent = create(
             if (p.id === s.plan.id) continue // never overwrite the open service underneath the operator
             services = upsert(services, p)
           }
-          return { themes, media, songs, services }
+          const prayers = { ...(bundle.prayers ?? {}), ...s.prayers }
+          for (const [id, p] of Object.entries(bundle.prayers ?? {})) {
+            if (!s.prayers[id]?.text?.trim()) prayers[id] = p // fill, never overwrite a parish's own text
+          }
+          return { themes, media, songs, services, prayers }
         }),
 
       // --- themes ----------------------------------------------------------
@@ -411,10 +459,27 @@ export const useContent = create(
     }),
     {
       name: 'worship-content-v1',
-      version: 1,
+      version: 3,
       // v0 → v1: services and library arrived, and the Scripture theme gained
       // a reference footer. Earlier saves get both without losing anything.
       migrate: (state, from) => {
+        if (from < 3) {
+          // v3: the built-in themes move to the bundled serif. Only values still
+          // at the old defaults change — a parish's own tuning is kept.
+          const was = { theme_default: [64, 700], theme_scripture: [52, 500] }
+          const now = { theme_default: [72, 600], theme_scripture: [60, 600] }
+          state.themes = (state.themes ?? []).map((t) => {
+            if (!was[t.id] || t.fontFamily !== OLD_SANS) return t
+            const [size, weight] = was[t.id]
+            return {
+              ...t,
+              fontFamily: SERIF,
+              fontSize: t.fontSize === size ? now[t.id][0] : t.fontSize,
+              fontWeight: t.fontWeight === weight ? now[t.id][1] : t.fontWeight,
+            }
+          })
+        }
+        if (from < 2) state.prayers ??= {}
         if (from < 1) {
           state.services ??= []
           state.songs ??= []
@@ -431,6 +496,7 @@ export const useContent = create(
         plan: s.plan,
         services: s.services,
         songs: s.songs,
+        prayers: s.prayers,
         themes: s.themes,
         logoId: s.logoId,
         logoUrl: s.logoUrl?.startsWith('blob:') ? null : s.logoUrl,
@@ -462,8 +528,12 @@ function nextSunday() {
 
 function defaultTitle(type) {
   return (
-    { song: 'New song', scripture: 'New scripture', text: 'New text', media: 'Media', countdown: 'Countdown' }[
-      type
-    ] ?? 'Untitled'
+    {
+      song: 'New song',
+      scripture: 'New scripture',
+      text: 'New text',
+      media: 'Media',
+      countdown: 'Countdown',
+    }[type] ?? 'Untitled'
   )
 }

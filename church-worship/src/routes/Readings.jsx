@@ -4,6 +4,9 @@ import { useContent } from '../store/useContent'
 import { useCue } from '../store/useLive'
 import { dayOf, partsOf, isPsalm, GRADES } from '../lib/lectionary'
 import { buildMass } from '../lib/massBuilder'
+import { buildWholeMass, massContext } from '../lib/orderOfMass'
+import { ORDER, belongs } from '../data/orderOfMass'
+import { Link } from 'react-router-dom'
 
 /**
  * The readings of the day, from the Lectionary for Mass.
@@ -134,18 +137,40 @@ function Day({ day }) {
   const isSunday = new Date(`${day.date}T12:00:00`).getDay() === 0
   const p = day.principal
 
+  // 'mass': the whole Order of Mass with the readings in place · 'readings': readings only.
+  const prayers = useContent((s) => s.prayers)
+  const setPrayer = useContent((s) => s.setPrayer)
+  const [what, setWhat] = useState(() => readPref('worship-what', 'mass'))
+  const [hymns, setHymns] = useState(() => readPref('worship-hymns', '1') === '1')
+  const noMass = option?.event.key === 'GoodFri' // the Celebration of the Passion is not a Mass
+  const massSunday =
+    option?.note === 'Evening Mass' ? new Date(`${day.date}T12:00:00`).getDay() === 6 || isSunday : isSunday
+  const ctx = option ? massContext(option, massSunday) : null
+  const part = (id) => ORDER.find((x) => x.id === id)
+  const [include, setInclude] = useState({})
+  useEffect(() => setInclude({}), [optionId])
+  const gloria = include.gloria ?? (ctx ? belongs(part('gloria'), ctx) : false)
+  const creed = include.creed ?? (ctx ? belongs(part('creed'), ctx) : false)
+
   const build = async () => {
     setResult(null)
     writePref('worship-words', maxWords)
     writePref('worship-layout', layout)
+    writePref('worship-what', what)
+    writePref('worship-hymns', hymns ? '1' : '0')
     saveResponses(parts, sel)
     try {
-      const out = await buildMass(option, parts, sel, {
-        layout,
-        maxWords,
-        titleSlide,
-        onProgress: (f, label) => setProgress({ f, label }),
-      })
+      const common = { layout, maxWords, titleSlide, onProgress: (f, label) => setProgress({ f, label }) }
+      const out =
+        what === 'mass' && !noMass
+          ? await buildWholeMass(option, parts, sel, {
+              ...common,
+              isSunday: massSunday,
+              include: { gloria, creed },
+              hymns,
+              prayers,
+            })
+          : await buildMass(option, parts, sel, common)
       insertLectionary(out.group, out.items, cuedId)
       setResult(out)
       const first = out.items.find((it) => it.type === 'scripture') ?? out.items[0]
@@ -285,6 +310,24 @@ function Day({ day }) {
 
           <div className="row build-row">
             <div className="field inline">
+              <span>Add</span>
+              <div className="segmented layout">
+                <button
+                  className={what === 'mass' ? 'on' : ''}
+                  onClick={() => setWhat('mass')}
+                  disabled={noMass}
+                >
+                  Whole Mass
+                </button>
+                <button
+                  className={what === 'readings' || noMass ? 'on' : ''}
+                  onClick={() => setWhat('readings')}
+                >
+                  Readings only
+                </button>
+              </div>
+            </div>
+            <div className="field inline">
               <span>On screen</span>
               <div className="segmented layout">
                 <button className={layout === 'whole' ? 'on' : ''} onClick={() => setLayout('whole')}>
@@ -313,9 +356,71 @@ function Day({ day }) {
               <span>Title slide</span>
             </label>
             <button className="btn btn-primary btn-lg" onClick={build} disabled={!!progress}>
-              {progress ? `Building… ${Math.round(progress.f * 100)}%` : 'Add readings to service'}
+              {progress
+                ? `Building… ${Math.round(progress.f * 100)}%`
+                : what === 'mass' && !noMass
+                  ? 'Add whole Mass to service'
+                  : 'Add readings to service'}
             </button>
           </div>
+
+          {what === 'mass' && !noMass && (
+            <div className="mass-settings">
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={gloria}
+                  onChange={(e) => setInclude((i) => ({ ...i, gloria: e.target.checked }))}
+                />
+                <span>Gloria</span>
+              </label>
+              <label className="toggle">
+                <input
+                  type="checkbox"
+                  checked={creed}
+                  onChange={(e) => setInclude((i) => ({ ...i, creed: e.target.checked }))}
+                />
+                <span>Creed</span>
+              </label>
+              {creed && (
+                <select
+                  value={prayers.creed?.choice ?? 'nicene'}
+                  onChange={(e) => setPrayer('creed', { choice: e.target.value })}
+                >
+                  <option value="nicene">Nicene Creed</option>
+                  <option value="apostles">Apostles’ Creed</option>
+                </select>
+              )}
+              <label className="field inline">
+                <span>Mystery of Faith</span>
+                <select
+                  value={prayers['mystery-of-faith']?.choice ?? 'one'}
+                  onChange={(e) => setPrayer('mystery-of-faith', { choice: e.target.value })}
+                >
+                  <option value="one">First acclamation</option>
+                  <option value="two">Second acclamation</option>
+                  <option value="three">Third acclamation</option>
+                </select>
+              </label>
+              <label className="toggle">
+                <input type="checkbox" checked={hymns} onChange={(e) => setHymns(e.target.checked)} />
+                <span>Hymn places</span>
+              </label>
+              <Link to="/prayers" className="small">
+                Prayer wording →
+              </Link>
+              <span className="muted small">
+                Gloria and Creed are set for the day ({gloria ? 'Gloria' : 'no Gloria'},{' '}
+                {creed ? 'Creed' : 'no Creed'}); change them if your parish does otherwise.
+              </span>
+            </div>
+          )}
+          {noMass && (
+            <p className="muted small">
+              Good Friday has no Mass — only the readings are added. Its Celebration of the Passion has its
+              own order.
+            </p>
+          )}
           {progress && <p className="muted small">{progress.label}</p>}
           {layout === 'whole' && !progress && (
             <p className="muted small">

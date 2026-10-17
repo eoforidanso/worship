@@ -1480,6 +1480,76 @@ input[type='range'] {
   max-width: 760px;
 }
 
+/* --- prayers ------------------------------------------------------------ */
+
+.prayers {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 1100px;
+}
+.prayers h3 {
+  margin-bottom: 8px;
+}
+.prayers-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+.prayers-head p {
+  margin: 4px 0 0;
+  max-width: 640px;
+}
+.prayer-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.prayer-row {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 9px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.prayer-title {
+  flex: 1;
+  min-width: 160px;
+}
+.prayer-preview {
+  margin: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: pre-wrap;
+  max-height: 7.5em;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 70%, transparent);
+  mask-image: linear-gradient(#000 70%, transparent);
+}
+.mass-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: var(--bg-2);
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+.mass-settings select {
+  width: auto;
+}
+
 /* --- narrow screens ------------------------------------------------------ */
 
 @media (max-width: 1100px) {

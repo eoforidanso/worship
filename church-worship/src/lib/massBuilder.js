@@ -50,7 +50,7 @@ const words = (t) => t.split(/\s+/).filter(Boolean).length
  * Split into the fewest screens of at most about `limit` words, evened out —
  * a 300-word reading becomes two of 150, not one of 220 and one of 80.
  */
-function balance(units, limit) {
+export function balance(units, limit) {
   const sizes = units.map((u) => words(u.text))
   const total = sizes.reduce((a, b) => a + b, 0)
   // A little over the limit still fits; splitting it would cost a press for nothing.
