@@ -108,6 +108,27 @@
         background: linear-gradient(90deg, transparent, #d6ac4a, transparent);
         animation: splash-slide 1.8s ease-in-out infinite;
       }
+      #splash.ready {
+        cursor: pointer;
+      }
+      #splash.ready .loading {
+        animation: none;
+        opacity: 0;
+        transition: opacity 0.4s;
+      }
+      #splash .skip {
+        position: absolute;
+        bottom: max(32px, env(safe-area-inset-bottom));
+        font-size: 15px;
+        font-variant-caps: all-small-caps;
+        letter-spacing: 0.12em;
+        color: rgba(226, 205, 143, 0.55);
+        opacity: 0;
+        transition: opacity 0.8s 0.4s;
+      }
+      #splash.ready .skip {
+        opacity: 1;
+      }
       #splash.gone {
         opacity: 0;
         pointer-events: none;
@@ -158,6 +179,7 @@
       <div class="name">Ambo</div>
       <div class="tag">The Mass, on Screen</div>
       <div class="loading"></div>
+      <div class="skip">Tap or press any key to begin</div>
     </div>
     <script>
       // Never on the projector or the stage screen: those open straight to black.
@@ -172,11 +194,33 @@
             s.remove()
           }, 500)
         }
-        // Called once the app has drawn; held a moment so the sign is seen, not flashed.
-        window.__amboReady = function () {
-          setTimeout(hide, Math.max(0, 1000 - (Date.now() - t0)))
+        var HOLD = 10000 // the sign stays for ten seconds…
+        // …but once the app is ready, a tap, click or key lets anyone in at once.
+        // The key is swallowed so it can't also act in the app (Space = next slide).
+        var skip = function (e) {
+          e.preventDefault()
+          e.stopPropagation()
+          off()
+          hide()
         }
-        setTimeout(hide, 6000) // whatever happens, never stand in the way
+        var off = function () {
+          window.removeEventListener('keydown', skip, true)
+          s.removeEventListener('pointerdown', skip)
+        }
+        // Called once the app has drawn.
+        window.__amboReady = function () {
+          s.classList.add('ready')
+          window.addEventListener('keydown', skip, true)
+          s.addEventListener('pointerdown', skip)
+          setTimeout(function () {
+            off()
+            hide()
+          }, Math.max(0, HOLD - (Date.now() - t0)))
+        }
+        setTimeout(function () {
+          off()
+          hide()
+        }, HOLD + 2000) // whatever happens, never stand in the way
       })()
     </script>
     <div id="root"></div>
