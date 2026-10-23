@@ -26,6 +26,7 @@ import { useHistory, undo, redo, restoreSnapshot } from "../lib/history";
 import { DRAG_SONG, DRAG_READING, buildDroppedReading } from "../lib/dragTypes";
 import { TEMPLATES } from "../lib/autoMass";
 import { timeline, clock, fmtDuration } from "../lib/timing";
+import DictationTextarea from "./DictationTextarea";
 
 const TYPE_META = {
   song: { icon: "♪", label: "Song" },
@@ -490,7 +491,7 @@ function ImportPanel({ onFiles, onText, onClose, incoming, onTaken }) {
 
   return (
     <div className="import-panel">
-      <textarea
+      <DictationTextarea
         rows={4}
         value={text}
         placeholder={

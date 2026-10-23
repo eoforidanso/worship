@@ -424,7 +424,7 @@ export function renderSlide(ctx, opts) {
   // The footer belongs to the slide's words, so it goes when they do (clear,
   // countdown) and takes its room out of the text box rather than overlapping.
   const foot = countdownTo == null && footer ? footer : "";
-  const footSize = 34 * scale;
+  const footSize = 40 * scale;
   const footRoom = foot ? footSize * 2 : 0;
   const boxW = w - pad * 2;
   const boxH = h - pad * 2 - footRoom;

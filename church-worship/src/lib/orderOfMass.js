@@ -13,7 +13,7 @@
 
 import { uid } from './id'
 import { ORDER, SECTIONS, belongs, builtInText } from '../data/orderOfMass'
-import { buildMass, balance } from './massBuilder'
+import { buildMass, balance, SCREEN_WORDS } from './massBuilder'
 import { parseCitation } from './bible'
 import { RITUALS } from '../data/ritual'
 
@@ -113,7 +113,7 @@ export function massContext(option, isSunday) {
  * }
  */
 export async function buildWholeMass(option, parts, selections, opts) {
-  const { isSunday, include = {}, choices = {}, hymns = true, prayers = {}, screenWords = 220 } = opts
+  const { isSunday, include = {}, choices = {}, hymns = true, prayers = {}, screenWords = SCREEN_WORDS } = opts
   const readings = await buildMass(option, parts, selections, { ...opts, layout: opts.layout ?? 'whole' })
   const group = readings.group
   const ctx = massContext(option, isSunday)

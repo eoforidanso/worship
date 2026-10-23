@@ -5,7 +5,8 @@ import { useContent, DEFAULT_THEME } from "../store/useContent";
 import { useLive } from "../store/useLive";
 import { footerFor } from "../lib/render";
 import { TRANSLATIONS, lookup, versesToSlides } from "../lib/scripture";
-import { textToScreens } from "../lib/massBuilder";
+import { textToScreens, SCREEN_WORDS } from "../lib/massBuilder";
+import DictationTextarea from "../components/DictationTextarea";
 
 export default function SlideComposer() {
   const { itemId } = useParams();
@@ -65,7 +66,7 @@ export default function SlideComposer() {
   // Readings are prose: split by sentence. Songs: a blank line per slide.
   const prose = item.type === "scripture";
   const applyBulk = () => {
-    if (prose) setSlides(item.id, textToScreens(bulk, 220, "", item.subtitle));
+    if (prose) setSlides(item.id, textToScreens(bulk, SCREEN_WORDS, "", item.subtitle));
     else importLyrics(item.id, bulk);
     setBulk("");
     setShowBulk(false);
@@ -161,7 +162,7 @@ export default function SlideComposer() {
             </label>
             <label className="field">
               <span>Slide text</span>
-              <textarea
+              <DictationTextarea
                 rows={6}
                 value={slide.body}
                 onChange={(e) =>
@@ -223,7 +224,7 @@ export default function SlideComposer() {
               )}{" "}
               This replaces the existing slides.
             </p>
-            <textarea
+            <DictationTextarea
               rows={10}
               value={bulk}
               placeholder={
@@ -370,7 +371,7 @@ export default function SlideComposer() {
 
         <label className="field">
           <span>Notes (stage display only)</span>
-          <textarea
+          <DictationTextarea
             rows={4}
             value={item.notes}
             onChange={(e) => updateItem(item.id, { notes: e.target.value })}

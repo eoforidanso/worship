@@ -32,6 +32,7 @@ import { announcementItem, showsOn } from "../lib/announcements";
 import { uid } from "../lib/id";
 import { DRAG_READING } from "../lib/dragTypes";
 import { fmtDuration, namesToPractise, readingSeconds } from "../lib/timing";
+import DictationTextarea from "../components/DictationTextarea";
 
 /**
  * The readings — and the whole Mass — for a date.
@@ -592,7 +593,7 @@ function Day({ day, ritual }) {
     wholeMass ? "Whole Mass" : "Readings only",
     wholeMass && (gloria ? "Gloria" : "no Gloria"),
     wholeMass && (creed ? "Creed" : "no Creed"),
-    layout === "whole" ? "one screen per reading" : `${maxWords} words a slide`,
+    layout === "whole" ? "large print, few screens" : `${maxWords} words a slide`,
     wholeMass && withNotices && notices.length
       ? `${notices.length} notice${notices.length === 1 ? "" : "s"}`
       : null,
@@ -771,7 +772,7 @@ function Day({ day, ritual }) {
                       />
                     )}
                     {on && s.source === "paste" && (
-                      <textarea
+                      <DictationTextarea
                         rows={5}
                         placeholder={
                           isPsalm(part.part)
@@ -927,7 +928,7 @@ function Day({ day, ritual }) {
                 className={layout === "whole" ? "on" : ""}
                 onClick={() => setLayout("whole")}
               >
-                Whole reading
+                Large print
               </button>
               <button
                 className={layout === "verses" ? "on" : ""}
@@ -1204,7 +1205,7 @@ function ResponsesImport() {
         One per line: a date or the psalm citation, then the response —
         separated by a tab, “|” or “ — ”.
       </p>
-      <textarea
+      <DictationTextarea
         rows={5}
         value={text}
         onChange={(e) => setText(e.target.value)}

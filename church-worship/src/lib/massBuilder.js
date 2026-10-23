@@ -60,8 +60,16 @@ function chunkVerses(verses, maxWords) {
 const words = (t) => t.split(/\s+/).filter(Boolean).length;
 
 /**
+ * The most words one screen carries. The renderer shrinks text to fit its
+ * screen, so this is what really sets the size people at the back read:
+ * ~60 words keeps the Scripture theme near 80px on a 1080p screen, readable
+ * from the back pews; 220 fell to ≈45px, lost past the middle of the church.
+ */
+export const SCREEN_WORDS = 60;
+
+/**
  * Split into the fewest screens of at most about `limit` words, evened out —
- * a 300-word reading becomes two of 150, not one of 220 and one of 80.
+ * a 150-word reading becomes three of 50, not two of 60 and one of 30.
  */
 export function balance(units, limit) {
   const sizes = units.map((u) => words(u.text));
@@ -137,7 +145,7 @@ function sentences(text) {
 /** Pasted prose → the fewest readable screens (≤ `screenWords` each). */
 export function textToScreens(
   text,
-  screenWords = 220,
+  screenWords = SCREEN_WORDS,
   label = "",
   footer = "",
 ) {
@@ -365,7 +373,7 @@ export async function buildMass(
   selections,
   {
     layout = "whole",
-    screenWords = 220,
+    screenWords = SCREEN_WORDS,
     maxWords = 45,
     titleSlide = true,
     bible = preferredBible(),

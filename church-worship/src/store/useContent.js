@@ -20,7 +20,7 @@ export const DEFAULT_THEME = {
   name: 'Default',
   // A missal's typeface. Bundled (see main.jsx), so it projects offline.
   fontFamily: SERIF,
-  fontSize: 72, // px, relative to a 1920x1080 canvas — Garamond runs small, so a little larger
+  fontSize: 96, // px, relative to a 1920x1080 canvas — sized for the back pews
   fontWeight: 600, // semibold: Garamond's regular is too fine for a projector
   color: '#ffffff',
   align: 'center', // left | center | right
@@ -29,7 +29,7 @@ export const DEFAULT_THEME = {
   uppercase: false,
   shadow: true,
   outline: false,
-  padding: 120,
+  padding: 80,
   showFooter: false, // reference line along the bottom (scripture, credits)
   liturgical: true, // background follows the day's liturgical colour
   background: { kind: 'color', value: '#0b1020' },
@@ -39,7 +39,7 @@ const SCRIPTURE_THEME = {
   ...DEFAULT_THEME,
   id: 'theme_scripture',
   name: 'Scripture',
-  fontSize: 60,
+  fontSize: 84,
   fontWeight: 600,
   align: 'left',
   showFooter: true,
@@ -519,10 +519,25 @@ export const useContent = create(
         merged.songs = (merged.songs ?? []).filter(Boolean).map(repairItem)
         return merged
       },
-      version: 6,
+      version: 7,
       // v0 → v1: services and library arrived, and the Scripture theme gained
       // a reference footer. Earlier saves get both without losing anything.
       migrate: (state, from) => {
+        if (from < 7) {
+          // v7: larger text for the back pews. Only values still at the old
+          // defaults change — a parish's own tuning is kept.
+          const was = { theme_default: 72, theme_scripture: 60 }
+          const now = { theme_default: 96, theme_scripture: 84 }
+          state.themes = (state.themes ?? []).map((t) =>
+            t.id in was
+              ? {
+                  ...t,
+                  fontSize: t.fontSize === was[t.id] ? now[t.id] : t.fontSize,
+                  padding: t.padding === 120 ? 80 : t.padding,
+                }
+              : t,
+          )
+        }
         if (from < 6) {
           // v6: the starter hymnal, added once (anything already there is kept).
           const have = new Set((state.songs ?? []).map((x) => x.id))

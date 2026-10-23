@@ -3780,3 +3780,65 @@ button.link {
 .live-strip-rehearsal .live-strip-pos {
   color: #b9a8e6;
 }
+
+/* --- dictation: speak into a text field ---------------------------------- */
+
+.dictation {
+  position: relative;
+}
+.dictation textarea {
+  padding-right: 40px;
+}
+.dictation-mic {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--bg-3);
+  color: var(--muted);
+  cursor: pointer;
+}
+.dictation-mic:hover {
+  color: var(--text);
+  border-color: var(--muted);
+}
+.dictation-mic:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.dictation.listening .dictation-mic {
+  background: #b3261e;
+  border-color: #b3261e;
+  color: #fff;
+  animation: dictation-pulse 1.4s ease-in-out infinite;
+}
+.dictation.listening textarea {
+  outline: 2px solid #b3261e;
+  outline-offset: -1px;
+}
+.dictation-status {
+  margin: 4px 0 0;
+  color: var(--muted);
+}
+.dictation-status em {
+  color: var(--text);
+}
+@keyframes dictation-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(240, 70, 60, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(240, 70, 60, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dictation.listening .dictation-mic {
+    animation: none;
+  }
+}

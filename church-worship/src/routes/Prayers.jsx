@@ -1,6 +1,7 @@
 import { useContent } from '../store/useContent'
 import { PRAYERS, SECTIONS, builtInText } from '../data/orderOfMass'
 import { prayerText } from '../lib/orderOfMass'
+import DictationTextarea from '../components/DictationTextarea'
 
 const USES = [
   ['en', 'Traditional English'],
@@ -103,7 +104,7 @@ function PrayerRow({ part, pref, prefs, set }) {
         </div>
       </div>
       {use === 'parish' ? (
-        <textarea
+        <DictationTextarea
           rows={Math.min(12, Math.max(4, builtInText(part, 'en', choice).split('\n').length + 1))}
           placeholder={`Paste the ${part.title} from your missal. Start the people’s lines with “R. ”.`}
           value={own}

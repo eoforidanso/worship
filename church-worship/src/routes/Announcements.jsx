@@ -9,6 +9,7 @@ import {
   showsOn,
 } from "../lib/announcements";
 import { storePicture } from "../lib/importer";
+import DictationTextarea from "../components/DictationTextarea";
 
 /**
  * Parish notices, kept here week to week and added to the service in one
@@ -207,7 +208,7 @@ function Notice({ a, index, count, date, theme }) {
           onChange={(e) => set({ title: e.target.value })}
         />
         {!a.mediaId && (
-          <textarea
+          <DictationTextarea
             rows={3}
             placeholder="What to say. You can paste a picture here instead."
             value={a.text}

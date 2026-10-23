@@ -179,13 +179,11 @@ Ordinary Time · Year A" — next to the date.
   optional title slide, First Reading, Responsorial Psalm, Second Reading,
   Gospel Acclamation, Gospel. Building the same Mass again replaces it in
   place.
-- **One screen per reading** (the default). Each reading appears whole, so
-  nobody presses Next while it is proclaimed; what it is and where it's from
-  run along the bottom ("Gospel · Matthew 22:15-21"). The psalm shows the
-  response on top and every stanza below. Only a reading too long to read
-  from the pews (over ~220 words: the Passion, some Easter Vigil readings) is
-  split, into the fewest even screens — a typical Sunday is one screen per
-  reading.
+- **Large print** (the default). Each reading is cut into the fewest even
+  screens of about 60 words, never mid-verse, so the text stays near full
+  size (~80px on a 1080p screen) for the back pews; what it is and where
+  it's from run along the bottom ("Gospel · Matthew 22:15-21 · 1/2"). The
+  psalm shows the response on top of each screen with the stanzas below.
 - **A few verses at a time** is the other choice under *On screen*: a heading
   slide ("A reading from the Book of the Prophet Isaiah"), a few verses per
   slide, and the closing dialogue ("The word of the Lord. / Thanks be to
