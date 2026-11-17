@@ -75,7 +75,7 @@ const MESSAGES = {
 }
 
 async function request(route, params = {}, useKey = key) {
-  if (!useKey) throw new Error('Connect your YouVersion App Key first (Readings → Twi Bible).')
+  if (!useKey) throw new Error('Connect your YouVersion App Key first (Readings → Twi Bible, above the readings).')
   const url = new URL(API + route)
   for (const [name, value] of Object.entries(params))
     for (const v of Array.isArray(value) ? value : [value]) url.searchParams.append(name, String(v))
@@ -284,7 +284,7 @@ async function pooled(items, fn, size = 4) {
  */
 export async function youVersionVerses(books, END) {
   const version = savedVersion()
-  if (!version) throw new Error('Choose your Twi Bible first (Readings → Twi Bible).')
+  if (!version) throw new Error('Choose your Twi Bible first (Readings → Twi Bible, above the readings).')
   const wanted = []
   let group = 0
   for (const b of books) {

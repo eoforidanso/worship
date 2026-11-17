@@ -3941,3 +3941,15 @@ button.link {
 .twi-error {
   color: #f08a86;
 }
+
+/* The Bible choice above the readings: built-in Bibles and the Twi Bible. */
+.bible-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 8px 16px;
+  margin: 0 0 10px;
+}
+.bible-bar .twi-bible {
+  flex: 1 1 100%;
+}

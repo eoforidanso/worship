@@ -674,6 +674,36 @@ function Day({ day, ritual }) {
         <div className="readings-split">
           <section>
             <h3>Readings</h3>
+            {/* Which Bible — always in sight, with the Twi Bible beside the built-in ones. */}
+            <div className="bible-bar">
+              <div className="field inline">
+                <span>Bible</span>
+                <div className="segmented layout">
+                  {Object.entries(BIBLES).map(([id, b]) => (
+                    <button
+                      key={id}
+                      className={bible === id ? "on" : ""}
+                      onClick={() => {
+                        setBible(id);
+                        writePref("worship-bible", id);
+                      }}
+                    >
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <TwiBible
+                onChange={(on) => {
+                  // Dropping the Twi Bible while it was the choice falls back to the default.
+                  if (!on && bible === "twi") {
+                    setBible(DEFAULT_BIBLE);
+                    writePref("worship-bible", DEFAULT_BIBLE);
+                  }
+                  forceTwi((n) => n + 1);
+                }}
+              />
+            </div>
             <ul className="parts">
               {parts.map((part) => {
                 const s = sel[part.part] ?? {};
@@ -906,33 +936,6 @@ function Day({ day, ritual }) {
               </button>
             </div>
           </div>
-          <div className="field inline">
-            <span>Bible</span>
-            <div className="segmented layout">
-              {Object.entries(BIBLES).map(([id, b]) => (
-                <button
-                  key={id}
-                  className={bible === id ? "on" : ""}
-                  onClick={() => {
-                    setBible(id);
-                    writePref("worship-bible", id);
-                  }}
-                >
-                  {b.label}
-                </button>
-              ))}
-            </div>
-          </div>
-          <TwiBible
-            onChange={(on) => {
-              // Dropping the Twi Bible while it was the choice falls back to the default.
-              if (!on && bible === "twi") {
-                setBible(DEFAULT_BIBLE);
-                writePref("worship-bible", DEFAULT_BIBLE);
-              }
-              forceTwi((n) => n + 1);
-            }}
-          />
           <div className="field inline">
             <span>On screen</span>
             <div className="segmented layout">

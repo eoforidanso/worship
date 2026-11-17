@@ -71,8 +71,8 @@ day's colour, then the winners.
 ## The Twi Bible (YouVersion)
 
 The Twi editions are in copyright and licensed through YouVersion, so they
-are fetched rather than built in. **Readings → Options → Twi Bible → Connect
-YouVersion…**: paste the parish's free YouVersion App Key, choose the Twi
+are fetched rather than built in. **Readings → Twi Bible (above the readings) →
+Connect YouVersion…**: paste the parish's free YouVersion App Key, choose the Twi
 edition the key is licensed for, and *Twi* joins the Bible choices — for the
 whole Mass, or for one reading (the Gospel, say) under its *Text* list.
 
