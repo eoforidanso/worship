@@ -3,6 +3,7 @@ import SlideCanvas from "../components/SlideCanvas";
 import { useContent, DEFAULT_THEME } from "../store/useContent";
 import { useLive, useCue } from "../store/useLive";
 import { footerFor } from "../lib/render";
+import { isChorus } from "../lib/songbook";
 import { remotePin, newRemotePin } from "../lib/remote";
 import Welcome from "../components/Welcome";
 import MassProgress from "../components/MassProgress";
@@ -161,7 +162,7 @@ export default function LiveController() {
           {shown?.slides.map((sl, i) => (
             <button
               key={sl.id}
-              className={`thumb${shownIsLive && i === slideIndex ? " current" : ""}`}
+              className={`thumb${shownIsLive && i === slideIndex ? " current" : ""}${isChorus(sl) ? " chorus" : ""}`}
               onClick={() => live.goTo(shown.id, i)}
             >
               <SlideCanvas

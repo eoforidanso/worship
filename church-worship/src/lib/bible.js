@@ -17,6 +17,8 @@
  * Both ship with the app, so readings come up instantly with no internet.
  */
 
+import { savedVersion, isConnected, youVersionVerses } from "./youversion";
+
 const API = "https://api.getbible.net/v2/douayrheims";
 
 /** The built-in Bibles, the default first. `source` is what slides credit. */
@@ -29,6 +31,30 @@ export const BIBLES = {
   dr: { label: "Douay-Rheims", short: "Douay-Rheims", source: "Douay-Rheims" },
 };
 export const DEFAULT_BIBLE = "web";
+
+/**
+ * The Twi Bible joins the list once the parish has connected YouVersion and
+ * chosen an edition (see youversion.js). It is `online`: fetched, then kept on
+ * this computer, rather than built in.
+ */
+export function refreshTwiBible() {
+  const v = savedVersion();
+  if (!v || !isConnected()) {
+    delete BIBLES.twi;
+    return null;
+  }
+  const short = v.abbreviation || v.title;
+  BIBLES.twi = {
+    label: `Twi · ${short}`,
+    short,
+    // The publisher must be credited wherever the text is shown.
+    source:
+      v.copyright && v.copyright.length <= 80 ? `${short} · ${v.copyright}` : short,
+    online: true,
+  };
+  return BIBLES.twi;
+}
+refreshTwiBible();
 
 /** The parish's choice on the Readings page, remembered on this device. */
 export function preferredBible() {
@@ -570,6 +596,18 @@ export async function fetchPassage(citation, { bible = DEFAULT_BIBLE } = {}) {
   if (!BIBLES[bible]) bible = DEFAULT_BIBLE;
   const dr = bible === "dr";
   const books = parseCitation(citation);
+  if (BIBLES[bible].online) {
+    // Twi, from YouVersion: in the lectionary's own numbering, like the WEB.
+    const verses = await youVersionVerses(books, END);
+    if (!verses.length) throw new Error(`No text found for ${citation}.`);
+    return {
+      citation,
+      book: books[0].book,
+      books: books.map((b) => b.book),
+      bible,
+      verses,
+    };
+  }
   const verses = [];
   let group = 0;
   for (const b of books) {

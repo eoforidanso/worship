@@ -13,6 +13,7 @@
 
 import { useContent } from '../store/useContent'
 import { getRecord, putMedia, hydrate, storedIds, urlFor } from './mediaStore'
+import { useSongbook, saveSongbook } from './songbook'
 
 const FORMAT = 'church-worship'
 const VERSION = 1
@@ -64,6 +65,8 @@ export async function exportBundle(scope = 'service') {
     parish: s.parish,
     prayers: s.prayers, // the parish's own Order of Mass texts travel with every file
     announcements: s.announcements,
+    // A full backup carries the imported songbook too, so a new laptop gets every song.
+    songbook: scope === 'all' ? { songs: useSongbook.getState().songs, source: useSongbook.getState().source } : undefined,
     blobs,
   }
 
@@ -94,6 +97,8 @@ export async function importBundle(file) {
     offline: m.id in (bundle.blobs ?? {}) || have.has(m.id),
   }))
   useContent.getState().importBundle({ ...bundle, media })
+  const book = Array.isArray(bundle.songbook?.songs) ? bundle.songbook.songs.filter((x) => x?.id && Array.isArray(x.slides)) : []
+  if (book.length) await saveSongbook(book, bundle.songbook.source)
 
   // Re-attach URLs for everything just written, then reconcile the dots.
   for (const id of Object.keys(bundle.blobs ?? {})) if (!urlFor(id)) await hydrate(id)
@@ -101,7 +106,7 @@ export async function importBundle(file) {
 
   return {
     services: (bundle.services ?? []).map((p) => p.title),
-    songs: bundle.songs?.length ?? 0,
+    songs: (bundle.songs?.length ?? 0) + book.length,
     media: Object.keys(bundle.blobs ?? {}).length,
   }
 }

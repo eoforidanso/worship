@@ -458,7 +458,8 @@ export function renderSlide(ctx, opts) {
       ctx.lineJoin = "round";
       ctx.strokeText(line, x, ly);
     }
-    ctx.fillStyle = theme.color;
+    // A slide may carry its own text colour (Day Borns: a colour per day).
+    ctx.fillStyle = slide?.color || theme.color;
     ctx.fillText(line, x, ly);
   });
 

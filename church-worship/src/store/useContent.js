@@ -2,6 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { uid } from '../lib/id'
 import { starterSongs } from '../data/hymns'
+import { songbookEntry } from '../lib/songbook'
+import { chorusAfterEachVerse } from '../lib/arrange'
 
 /**
  * Everything that survives a reload: the service plan, the slide content, the
@@ -98,6 +100,7 @@ export const useContent = create(
       logoId: null,
       parish: { name: '' }, // shown on the Mass title slide and the window title
       lastBackupAt: null, // epoch ms of the last "Back up everything"
+      chorusAfterVerse: true, // songbook songs: repeat the chorus after every verse when added
       backupSnoozedUntil: 0,
 
       // --- plan -----------------------------------------------------------
@@ -401,10 +404,13 @@ export const useContent = create(
 
       /** Copy a library entry into the open service, after `afterId` if given. */
       addFromLibrary: (libId, afterId = null, before = false) => {
-        const src = get().songs.find((x) => x.id === libId)
+        // The parish's own copy first; otherwise the imported songbook.
+        const src = get().songs.find((x) => x.id === libId) ?? songbookEntry(libId)
         if (!src) return null
         const item = cloneItem(src, { libraryId: libId })
         delete item.savedAt
+        // Songbook songs hold the chorus once; lay them out as they are sung.
+        if (src.songbook && get().chorusAfterVerse) item.slides = chorusAfterEachVerse(item.slides, uid)
         set((s) => {
           const items = [...s.plan.items]
           const target = items.findIndex((it) => it.id === afterId)
@@ -498,6 +504,7 @@ export const useContent = create(
         })),
 
       setLogo: (url, id = null) => set({ logoUrl: url, logoId: id }),
+      setChorusAfterVerse: (on) => set({ chorusAfterVerse: !!on }),
       setParish: (patch) => set((s) => ({ parish: { ...s.parish, ...patch } })),
       markBackedUp: () => set({ lastBackupAt: Date.now(), backupSnoozedUntil: 0 }),
       snoozeBackup: (days = 3) => set({ backupSnoozedUntil: Date.now() + days * 86400000 }),
@@ -593,6 +600,7 @@ export const useContent = create(
         logoId: s.logoId,
         parish: s.parish,
         lastBackupAt: s.lastBackupAt,
+        chorusAfterVerse: s.chorusAfterVerse,
         backupSnoozedUntil: s.backupSnoozedUntil,
         logoUrl: s.logoUrl?.startsWith('blob:') ? null : s.logoUrl,
         media: s.media.map(({ url, ...rest }) => rest),

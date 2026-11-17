@@ -19,12 +19,13 @@ import { useLive, useCue } from "../store/useLive";
 import { urlFor } from "../lib/mediaStore";
 import { ORDER } from "../data/orderOfMass";
 import { sectionOf } from "../lib/sections";
+import { useSongbook, songbookMatches } from "../lib/songbook";
 import { announceBuilt, runtimeMinutes } from "../lib/confidence";
 import { filesToItems, textToItem } from "../lib/importer";
 import { readiness } from "../lib/readiness";
 import { useHistory, undo, redo, restoreSnapshot } from "../lib/history";
 import { DRAG_SONG, DRAG_READING, buildDroppedReading } from "../lib/dragTypes";
-import { TEMPLATES } from "../lib/autoMass";
+import { TEMPLATES, PROGRAMMES } from "../lib/autoMass";
 import { timeline, clock, fmtDuration } from "../lib/timing";
 import DictationTextarea from "./DictationTextarea";
 
@@ -729,10 +730,12 @@ function OneClickMass({ onDone, onCustomise }) {
       const out = await buildTemplate(kind, date, {
         onProgress: (_, label) => setProgress(label),
       });
-      announceBuilt(
-        useContent.getState().plan.items,
-        useContent.getState().plan.title,
-      );
+      // "Mass built — N parts of the Mass" is for a Mass, not a carol service.
+      if (!out.programme)
+        announceBuilt(
+          useContent.getState().plan.items,
+          useContent.getState().plan.title,
+        );
       if (out.open) navigate(out.open);
       else
         onDone(
@@ -768,11 +771,20 @@ function OneClickMass({ onDone, onCustomise }) {
           onChange={(e) => template(e.target.value)}
         >
           <option value="">Other services…</option>
-          {TEMPLATES.map(([id, label]) => (
-            <option key={id} value={id}>
-              {label}
-            </option>
-          ))}
+          <optgroup label="Masses">
+            {TEMPLATES.map(([id, label]) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </optgroup>
+          <optgroup label="Programmes">
+            {PROGRAMMES.map(([id, label]) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
+          </optgroup>
         </select>
         <button className="btn btn-ghost btn-sm" onClick={onCustomise}>
           Choose readings first →
@@ -788,21 +800,29 @@ function LibraryQuickAdd({ afterId, onAdded }) {
   const addFromLibrary = useContent((s) => s.addFromLibrary);
   const [q, setQ] = useState("");
 
+  const book = useSongbook((s) => s.songs);
+  const total = songs.length + book.length;
+
   const hits = useMemo(() => {
     const needle = q.trim().toLowerCase();
     if (!needle) return [];
-    return songs
-      .filter(
-        (x) =>
-          x.title.toLowerCase().includes(needle) ||
-          (x.subtitle ?? "").toLowerCase().includes(needle) ||
-          (x.notes ?? "").toLowerCase().includes(needle) || // "Christmas", "Our Lady", "Eucharist"…
-          x.slides.some((sl) => sl.body.toLowerCase().includes(needle)),
-      )
-      .slice(0, 6);
-  }, [songs, q]);
+    const own = new Set(songs.map((x) => x.id));
+    const mine = songs.filter(
+      (x) =>
+        x.title.toLowerCase().includes(needle) ||
+        (x.subtitle ?? "").toLowerCase().includes(needle) ||
+        (x.notes ?? "").toLowerCase().includes(needle) || // "Christmas", "Our Lady", "Eucharist"…
+        x.slides.some((sl) => sl.body.toLowerCase().includes(needle)),
+    );
+    const theirs = book.filter(
+      (x) => !own.has(x.id) && songbookMatches(x.id, needle),
+    );
+    // A title match beats a match somewhere in the words.
+    const rank = (x) => (x.title.toLowerCase().includes(needle) ? 0 : 1);
+    return [...mine, ...theirs].sort((a, b) => rank(a) - rank(b)).slice(0, 8);
+  }, [songs, book, q]);
 
-  if (!songs.length) return null;
+  if (!total) return null;
 
   const add = (libId) => {
     const id = addFromLibrary(libId, afterId);
@@ -814,7 +834,7 @@ function LibraryQuickAdd({ afterId, onAdded }) {
     <div className="quick-add">
       <input
         className="search"
-        placeholder={`Add from library (${songs.length})…`}
+        placeholder={`Add from library (${total})…`}
         value={q}
         onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => {

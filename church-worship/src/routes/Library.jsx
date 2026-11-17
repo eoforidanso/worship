@@ -5,6 +5,16 @@ import { useLive, useCue } from "../store/useLive";
 import { exportBundle, importBundle } from "../lib/bundle";
 import { starterSongs } from "../data/hymns";
 import { DRAG_SONG } from "../lib/dragTypes";
+import {
+  useSongbook,
+  songbookMatches,
+  clearSongbook,
+  isChorus,
+} from "../lib/songbook";
+
+// A thousand rows is slow to draw and no use to read: show the first few and
+// let the search do the finding.
+const SHOW_MAX = 150;
 
 const starterIds = starterSongs().map((x) => x.id);
 
@@ -292,19 +302,65 @@ function Songs() {
   const cuedId = useCue((s) => s.itemId);
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(null);
+  const book = useSongbook((s) => s.songs);
+  const bookSource = useSongbook((s) => s.source);
+  const chorusAfterVerse = useContent((s) => s.chorusAfterVerse);
+  const setChorusAfterVerse = useContent((s) => s.setChorusAfterVerse);
 
-  const shown = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    const list = [...songs].sort((a, b) => a.title.localeCompare(b.title));
-    if (!needle) return list;
-    return list.filter(
-      (x) =>
-        x.title.toLowerCase().includes(needle) ||
-        (x.subtitle ?? "").toLowerCase().includes(needle) ||
-        (x.notes ?? "").toLowerCase().includes(needle) || // "Christmas", "Our Lady", "Eucharist"…
-        x.slides.some((sl) => sl.body.toLowerCase().includes(needle)),
+  // The parish's own library first-class; the imported songbook alongside. A
+  // songbook song the parish has saved its own copy of (☆) shows once, as theirs.
+  const all = useMemo(() => {
+    const own = new Set(songs.map((x) => x.id));
+    return [...songs, ...book.filter((x) => !own.has(x.id))].sort((a, b) =>
+      a.title.localeCompare(b.title, undefined, { numeric: true }),
     );
-  }, [songs, q]);
+  }, [songs, book]);
+
+  const matches = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return all;
+    return all.filter((x) =>
+      x.songbook && !x.savedAt
+        ? songbookMatches(x.id, needle)
+        : x.title.toLowerCase().includes(needle) ||
+          (x.subtitle ?? "").toLowerCase().includes(needle) ||
+          (x.notes ?? "").toLowerCase().includes(needle) || // "Christmas", "Our Lady", "Eucharist"…
+          x.slides.some((sl) => sl.body.toLowerCase().includes(needle)),
+    );
+  }, [all, q]);
+  const shown = matches.slice(0, SHOW_MAX);
+
+  // --- bringing songs over from Worship Studio ---
+  const wsRef = useRef(null);
+  const [busy, setBusy] = useState("");
+  const [imported, setImported] = useState("");
+  const importWs = async (file) => {
+    if (!file) return;
+    setImported("");
+    setBusy("Opening…");
+    try {
+      const { importFromWorshipStudio } =
+        await import("../lib/worshipStudioImport");
+      const r = await importFromWorshipStudio(file, setBusy);
+      const bits = [];
+      if (r.songs)
+        bits.push(
+          r.songs.added
+            ? `${r.songs.added} song${r.songs.added === 1 ? "" : "s"} added` +
+                (r.songs.updated ? `, ${r.songs.updated} updated` : "")
+            : `${r.songs.updated} songs already here — refreshed`,
+        );
+      if (r.pictures)
+        bits.push(
+          `${r.pictures} Day Borns picture${r.pictures === 1 ? "" : "s"} saved to Media`,
+        );
+      setImported(`${bits.join("; ") || "Nothing new to bring in"}.`);
+    } catch (err) {
+      setImported(`Import failed: ${err.message}`);
+    } finally {
+      setBusy("");
+    }
+  };
 
   // Say where the song went: the plan is in the rail, and a silent add looks like no add.
   const [added, setAdded] = useState(null); // { libId, message }
@@ -331,8 +387,65 @@ function Songs() {
       <div className="row between">
         <h3>Library</h3>
         <span className="muted small">
-          {songs.length} item{songs.length === 1 ? "" : "s"}
+          {all.length} item{all.length === 1 ? "" : "s"}
         </span>
+      </div>
+      <div className="songbook-bar">
+        <div className="row">
+          <button
+            className="btn btn-sm"
+            disabled={!!busy}
+            onClick={() => wsRef.current?.click()}
+            title="Choose the Worship Studio Source zip, or its song-library.js"
+          >
+            {busy ? "Importing…" : "Import from Worship Studio…"}
+          </button>
+          {book.length > 0 && (
+            <label
+              className="check small"
+              title="Songbook songs hold the chorus once. With this on, a song is added to the service with its chorus after every verse, so Next is all you need."
+            >
+              <input
+                type="checkbox"
+                checked={!!chorusAfterVerse}
+                onChange={(e) => setChorusAfterVerse(e.target.checked)}
+              />{" "}
+              Chorus after each verse
+            </label>
+          )}
+          <input
+            ref={wsRef}
+            type="file"
+            accept=".zip,.js,.json,application/zip"
+            hidden
+            onChange={(e) => {
+              importWs(e.target.files?.[0]);
+              e.target.value = "";
+            }}
+          />
+        </div>
+        <p className="muted small" role="status">
+          {busy ||
+            imported ||
+            (book.length
+              ? `Songbook: ${book.length} songs from ${bookSource || "Worship Studio"}, kept on this computer only.`
+              : "Bring the parish’s songs over: choose the Worship Studio Source zip. They stay on this computer.")}
+          {book.length > 0 && !busy && (
+            <>
+              {" "}
+              <button
+                className="link-btn"
+                onClick={() =>
+                  window.confirm(
+                    `Remove all ${book.length} songbook songs from this computer? Songs already in a service, and your own library, are kept.`,
+                  ) && clearSongbook().then(() => setImported(""))
+                }
+              >
+                Remove songbook
+              </button>
+            </>
+          )}
+        </p>
       </div>
       <input
         className="search"
@@ -361,6 +474,7 @@ function Songs() {
               <span className="muted small">
                 {[
                   x.subtitle,
+                  x.songbook && !x.savedAt && "Songbook",
                   `${x.slides.length} slide${x.slides.length === 1 ? "" : "s"}`,
                 ]
                   .filter(Boolean)
@@ -370,7 +484,11 @@ function Songs() {
                 <span className="song-preview">
                   {x.slides.map((sl) => (
                     <span key={sl.id}>
-                      {sl.label && <em>{sl.label}</em>}
+                      {sl.label && (
+                        <em className={isChorus(sl) ? "chorus" : undefined}>
+                          {sl.label}
+                        </em>
+                      )}
                       {sl.body}
                     </span>
                   ))}
@@ -389,20 +507,28 @@ function Songs() {
               >
                 {added?.libId === x.id ? "✓ Added" : "+ Add to service"}
               </button>
-              <button
-                className="icon-btn danger"
-                title="Remove from library"
-                onClick={() =>
-                  window.confirm(`Remove “${x.title}” from the library?`) &&
-                  removeFromLibrary(x.id)
-                }
-              >
-                ×
-              </button>
+              {(!x.songbook || x.savedAt) && (
+                <button
+                  className="icon-btn danger"
+                  title="Remove from library"
+                  onClick={() =>
+                    window.confirm(`Remove “${x.title}” from the library?`) &&
+                    removeFromLibrary(x.id)
+                  }
+                >
+                  ×
+                </button>
+              )}
             </span>
           </li>
         ))}
       </ul>
+      {matches.length > shown.length && (
+        <p className="muted small">
+          Showing the first {shown.length} of {matches.length}. Type a title, a
+          hymn number or a line of the words to find the rest.
+        </p>
+      )}
       {missingStarters > 0 && (
         <button className="btn btn-ghost btn-sm" onClick={restoreStarterHymns}>
           Restore {missingStarters} starter hymn
@@ -415,13 +541,13 @@ function Songs() {
           go.
         </p>
       )}
-      {songs.length === 0 && (
+      {all.length === 0 && (
         <p className="empty">
           Nothing saved yet. Press ☆ on any item in the service plan to keep it
           here for next time.
         </p>
       )}
-      {songs.length > 0 && shown.length === 0 && (
+      {all.length > 0 && shown.length === 0 && (
         <p className="empty">
           No hymn matches “{q}”. Try a word from the first line or the title —
           or build it in Compose and press ☆ to keep it here.

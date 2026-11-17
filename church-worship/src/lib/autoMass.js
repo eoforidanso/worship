@@ -75,6 +75,95 @@ export const TEMPLATES = [
   ['wedding', 'Wedding Mass…'],
 ]
 
+/** Services that are not a Mass: a running order of headed sections to fill. */
+export const PROGRAMMES = [
+  ['carols', 'Christmas Carols'],
+  ['youth', 'Youth Programme'],
+  ['dedication', 'Special Dedication'],
+  ['dayborns', 'Day Borns'],
+]
+
+const PROGRAMME_SECTIONS = {
+  carols: ['Welcome & opening prayer', 'Readings & carols', 'Reflection', 'Thanksgiving', 'Closing'],
+  youth: ['Welcome & opening prayer', 'Praise & worship', 'Scripture & message', 'Youth activities', 'Closing prayer'],
+  dedication: ['Welcome', 'Dedication ceremony', 'Songs & presentations', 'Thanksgiving', 'Closing'],
+}
+
+const textItem = (title, slides, extra = {}) => ({
+  id: uid('it'),
+  type: 'text',
+  title,
+  subtitle: '',
+  themeId: 'theme_default',
+  background: null,
+  slides: slides.map((sl) => ({ id: uid('sl'), label: '', body: '', ...sl })),
+  notes: '',
+  autoAdvance: 0,
+  ...extra,
+})
+
+/**
+ * A programme: a title slide, then one heading slide per section. Songs,
+ * readings and pictures are added under each heading from the library.
+ */
+function buildProgramme(kind) {
+  const st = useContent.getState()
+  const name = PROGRAMMES.find(([id]) => id === kind)[1]
+  const parish = st.parish?.name?.trim()
+  const items = [
+    textItem(name, [{ body: [parish, name].filter(Boolean).join('\n') }], { subtitle: 'Title' }),
+    ...PROGRAMME_SECTIONS[kind].map((section) => textItem(section, [{ body: section }], { subtitle: name })),
+  ]
+  st.insertItems(items)
+  st.setPlanTitle(name)
+  return { items, programme: true }
+}
+
+// The Akan day names: a boy's and a girl's for each day of the week.
+const DAY_BORNS = [
+  ['Sunday', 'Kwasi & Akosua', '#e56b1a'],
+  ['Monday', 'Kwadwo & Adwoa', '#15bc34'],
+  ['Tuesday', 'Kwabena & Abena', '#eab043'],
+  ['Wednesday', 'Kwaku & Akua', '#439cea'],
+  ['Thursday', 'Yaw & Yaa', '#d56cef'],
+  ['Friday', 'Kofi & Afia', '#ea4343'],
+  ['Saturday', 'Kwame & Ama', '#95f3a7'],
+]
+
+/**
+ * Day Borns: for each day of the week its picture (when the Day Borns
+ * pictures have been imported from Worship Studio) and its names in the day's
+ * colour, then the winners. One item, so Next walks through all of it.
+ */
+async function buildDayBorns() {
+  const st = useContent.getState()
+  const { dayBornPictureName } = await import('./worshipStudioImport')
+  const black = { kind: 'color', value: '#000000' }
+  const slides = []
+  let pictures = 0
+  for (const [day, names, color] of DAY_BORNS) {
+    const pic = st.media.find((m) => m.name === dayBornPictureName(day.toLowerCase()) && m.offline !== false)
+    if (pic) {
+      pictures++
+      slides.push({
+        label: `${day} — picture`,
+        background: { kind: 'image', mediaId: pic.id, fit: 'contain', fallback: '#000000' },
+      })
+    }
+    slides.push({ label: day, body: `${day}\n${names}`, color, background: black })
+  }
+  slides.push({ label: 'Winners', body: 'WINNERS', color: '#ffffff', background: black })
+  const item = textItem('Day Borns', slides, {
+    subtitle: 'Thanksgiving by day of birth',
+    notes: pictures
+      ? 'Edit the Winners slide with this week’s winning day.'
+      : 'Pictures: Services → Import from Worship Studio brings the seven Day Borns pictures; then build Day Borns again.',
+  })
+  st.insertItems([item])
+  st.setPlanTitle('Day Borns')
+  return { items: [item], programme: true }
+}
+
 // Holy days of obligation in the universal calendar (some fall on Sunday here).
 const HOLY_DAYS = [
   'MaryMotherOfGod',
@@ -106,6 +195,8 @@ const dow = (date) => new Date(`${date}T12:00:00`).getDay()
 export async function buildTemplate(kind, date, { onProgress } = {}) {
   const st = useContent.getState()
   if (kind === 'funeral' || kind === 'wedding') return { open: `/readings?ritual=${kind}` }
+  if (kind === 'dayborns') return buildDayBorns()
+  if (kind in PROGRAMME_SECTIONS) return buildProgramme(kind)
 
   if (kind === 'vigil') {
     const sat = dow(date) === 0 ? addDays(date, -1) : addDays(date, (6 - dow(date) + 7) % 7)

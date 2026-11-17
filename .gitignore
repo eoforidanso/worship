@@ -3,3 +3,6 @@ dist/
 dev-dist/
 .DS_Store
 *.local
+
+# Exports from other programs hold the parish's songs and pictures: keep them off GitHub.
+*.zip

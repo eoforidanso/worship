@@ -44,6 +44,42 @@ npm run server
 The **Output** window (`/output`) is what the congregation sees. Open it with the
 button in the top bar, drag it to the projector, double-click for fullscreen.
 
+## Coming over from Worship Studio
+
+**Services → Import from Worship Studio…** takes the *Worship Studio Source*
+zip as exported (or just its `song-library.js`) and brings in:
+
+- **the songbook** — every song in it (the parish's EasyWorship songs), with
+  their Verse / Chorus labels. Songbook songs appear in the Library and in
+  *Add from library* beside the starter hymnal, searchable by title, hymn
+  number or any line of the words. They are stored on this computer only
+  (IndexedDB) and are never part of the build or the repository — many are in
+  copyright. *Back up everything* carries them to another laptop.
+- **the seven Day Borns pictures**, into Media.
+
+**Chorus after each verse** (on by default) adds a songbook song to the
+service the way it is sung — verse, chorus, verse, chorus — so *Next* is all
+the operator needs. Only songs with a single chorus are rearranged; the words
+are never changed. Choruses have a red edge in the slide grid.
+
+**Programmes.** On an empty service, *Other services…* also builds a
+**Christmas Carols**, **Youth Programme** or **Special Dedication** running
+order (a title slide and a heading slide per section, to fill from the
+library) and **Day Borns**: each day's picture and its Akan names in the
+day's colour, then the winners.
+
+## The Twi Bible (YouVersion)
+
+The Twi editions are in copyright and licensed through YouVersion, so they
+are fetched rather than built in. **Readings → Options → Twi Bible → Connect
+YouVersion…**: paste the parish's free YouVersion App Key, choose the Twi
+edition the key is licensed for, and *Twi* joins the Bible choices — for the
+whole Mass, or for one reading (the Gospel, say) under its *Text* list.
+
+The key stays in this browser only; it is never written to a service file or
+a backup. Verses are fetched once and kept on this computer, so a Mass built
+while online projects offline. Slides credit the edition and its publisher.
+
 ## Planning a Mass
 
 **Everything is built in.** The calendar, the whole Lectionary, the prayers

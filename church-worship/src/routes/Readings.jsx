@@ -33,6 +33,7 @@ import { uid } from "../lib/id";
 import { DRAG_READING } from "../lib/dragTypes";
 import { fmtDuration, namesToPractise, readingSeconds } from "../lib/timing";
 import DictationTextarea from "../components/DictationTextarea";
+import TwiBible from "../components/TwiBible";
 
 /**
  * The readings — and the whole Mass — for a date.
@@ -455,6 +456,7 @@ function Day({ day, ritual }) {
   const [optionsOpen, setOptionsOpen] = useState(false);
   // The built-in Bible for every reading that doesn't name its own.
   const [bible, setBible] = useState(preferredBible);
+  const [, forceTwi] = useState(0); // the Bible list changes when Twi is connected
   const prayers = useContent((s) => s.prayers);
   const setPrayer = useContent((s) => s.setPrayer);
 
@@ -746,7 +748,7 @@ function Day({ day, ritual }) {
                       >
                         {Object.entries(BIBLES).map(([id, b]) => (
                           <option key={id} value={id}>
-                            {b.label} (built in)
+                            {b.label} {b.online ? "(YouVersion)" : "(built in)"}
                           </option>
                         ))}
                         <option value="paste">Our lectionary (paste)</option>
@@ -921,6 +923,16 @@ function Day({ day, ritual }) {
               ))}
             </div>
           </div>
+          <TwiBible
+            onChange={(on) => {
+              // Dropping the Twi Bible while it was the choice falls back to the default.
+              if (!on && bible === "twi") {
+                setBible(DEFAULT_BIBLE);
+                writePref("worship-bible", DEFAULT_BIBLE);
+              }
+              forceTwi((n) => n + 1);
+            }}
+          />
           <div className="field inline">
             <span>On screen</span>
             <div className="segmented layout">
